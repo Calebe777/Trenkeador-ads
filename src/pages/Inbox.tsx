@@ -10,10 +10,14 @@ import {
   Loader2, 
   AlertTriangle,
   RefreshCw,
-  User,
   Info,
   Zap,
-  CornerDownLeft
+  CornerDownLeft,
+  Search,
+  Smile,
+  Paperclip,
+  CheckCheck,
+  MessageSquare
 } from 'lucide-react';
 
 export const Inbox: React.FC = () => {
@@ -28,6 +32,35 @@ export const Inbox: React.FC = () => {
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const getAvatarInfo = (nome: string | null) => {
+    const defaultName = nome || 'Lead s/ Nome';
+    const initials = defaultName
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part[0].toUpperCase())
+      .join('');
+      
+    const colors = [
+      'bg-[#3b82f6] text-white-force',
+      'bg-[#00a884] text-white-force',
+      'bg-[#6366f1] text-white-force',
+      'bg-[#f59e0b] text-white-force',
+      'bg-[#ef4444] text-white-force',
+      'bg-[#ec4899] text-white-force',
+      'bg-[#8b5cf6] text-white-force',
+      'bg-[#14b8a6] text-white-force'
+    ];
+    let sum = 0;
+    for (let i = 0; i < initials.length; i++) {
+      sum += initials.charCodeAt(i);
+    }
+    const colorClass = colors[sum % colors.length];
+    
+    return { initials, colorClass };
+  };
 
   // WebSocket reference
   const wsRef = useRef<WebSocket | null>(null);
@@ -291,8 +324,15 @@ export const Inbox: React.FC = () => {
     return new Date(expiryStr).getTime() < new Date().getTime();
   };
 
+  const filteredConversas = conversas.filter(chat => {
+    const nome = (chat.lead_nome || '').toLowerCase();
+    const tel = (chat.lead_telefone || '').toLowerCase();
+    const query = searchTerm.toLowerCase();
+    return nome.includes(query) || tel.includes(query);
+  });
+
   return (
-    <div className="h-[80vh] flex border border-zinc-200 rounded-3xl bg-[#efeae2] overflow-hidden text-zinc-800 relative shadow-xl">
+    <div className="h-[calc(100vh-140px)] flex border border-zinc-200 rounded-3xl bg-[#efeae2] overflow-hidden text-zinc-800 relative shadow-xl">
       {/* Left Column: Conversations List */}
       <div className="w-80 shrink-0 border-r border-zinc-200 flex flex-col h-full bg-white">
         <div className="p-4 border-b border-zinc-200 flex justify-between items-center bg-[#f0f2f5]">
@@ -309,55 +349,87 @@ export const Inbox: React.FC = () => {
           </button>
         </div>
 
+        {/* Search Bar */}
+        <div className="p-2 border-b border-zinc-200 bg-[#f0f2f5] flex items-center">
+          <div className="relative w-full flex items-center bg-white rounded-xl border border-zinc-200">
+            <span className="pl-3 text-zinc-400">
+              <Search size={14} />
+            </span>
+            <input
+              type="text"
+              placeholder="Pesquisar conversa..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-white text-xs py-1.5 px-2.5 focus:outline-none text-[#111b21] placeholder-zinc-400 border-none"
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm('')} 
+                className="pr-3 text-zinc-400 hover:text-[#111b21] cursor-pointer text-[10px]"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Chat List Scroll View */}
         <div className="flex-1 overflow-y-auto divide-y divide-zinc-100">
           {loadingChats && conversas.length === 0 ? (
             <div className="flex justify-center items-center py-12">
               <Loader2 size={24} className="animate-spin text-[#00a884]" />
             </div>
-          ) : conversas.length === 0 ? (
+          ) : filteredConversas.length === 0 ? (
             <div className="p-8 text-center text-zinc-400 text-xs">
-              Nenhuma conversa em andamento.
+              {searchTerm ? 'Nenhuma conversa encontrada.' : 'Nenhuma conversa em andamento.'}
             </div>
           ) : (
-            conversas.map((chat) => {
+            filteredConversas.map((chat) => {
               const active = activeConversa?.id === chat.id;
               const expired = is24hWindowExpired(chat.janela_24h_expira_em);
+              const avatar = getAvatarInfo(chat.lead_nome);
 
               return (
                 <div
                   key={chat.id}
                   onClick={() => setActiveConversa(chat)}
-                  className={`p-4 cursor-pointer transition-all flex flex-col justify-between hover:bg-zinc-50 ${
+                  className={`p-3.5 cursor-pointer transition-all flex items-center space-x-3 hover:bg-zinc-50 border-b border-zinc-100 ${
                     active ? 'bg-[#f0f2f5] border-l-4 border-[#00a884]' : ''
                   }`}
                 >
-                  <div className="flex justify-between items-start">
-                    <span className="font-semibold text-[#111b21] text-sm truncate max-w-[180px]">
-                      {chat.lead_nome || 'Lead s/ Nome'}
-                    </span>
-                    {chat.ultima_mensagem_em && (
-                      <span className="text-[10px] text-[#667781] font-mono">
-                        {new Date(chat.ultima_mensagem_em).toLocaleTimeString('pt-BR', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                    )}
+                  {/* Circular initials avatar */}
+                  <div className={`w-10 h-10 rounded-full shrink-0 flex items-center justify-center font-bold text-xs shadow-sm ${avatar.colorClass}`}>
+                    {avatar.initials}
                   </div>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-xs text-[#667781] font-mono truncate max-w-[150px]">
-                      {chat.lead_telefone}
-                    </span>
-                    {expired ? (
-                      <span className="text-[9px] font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20 py-0.5 px-1.5 rounded-full flex items-center">
-                        <Clock size={10} className="mr-0.5 text-amber-600" /> +24h
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline mb-0.5">
+                      <span className="font-semibold text-[#111b21] text-xs truncate pr-2">
+                        {chat.lead_nome || 'Lead s/ Nome'}
                       </span>
-                    ) : (
-                      <span className="text-[9px] font-bold bg-[#d9fdd3] text-[#00a884] border border-[#00a884]/20 py-0.5 px-1.5 rounded-full flex items-center">
-                        Janela Ativa
+                      {chat.ultima_mensagem_em && (
+                        <span className="text-[9px] text-[#667781] font-mono shrink-0">
+                          {new Date(chat.ultima_mensagem_em).toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] text-[#667781] font-mono truncate max-w-[120px]">
+                        {chat.lead_telefone}
                       </span>
-                    )}
+                      {expired ? (
+                        <span className="text-[8px] font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20 py-0.5 px-1.5 rounded-full flex items-center uppercase tracking-wider scale-90 origin-right">
+                          <Clock size={8} className="mr-0.5 text-amber-600" /> +24h
+                        </span>
+                      ) : (
+                        <span className="text-[8px] font-bold bg-[#d9fdd3] text-[#00a884] border border-[#00a884]/20 py-0.5 px-1.5 rounded-full flex items-center uppercase tracking-wider scale-90 origin-right">
+                          Janela Ativa
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -371,16 +443,27 @@ export const Inbox: React.FC = () => {
         {activeConversa ? (
           <>
             {/* Active Chat Header */}
-            <div className="p-4 border-b border-zinc-200 bg-[#f0f2f5] flex justify-between items-center shrink-0">
-              <div>
-                <h3 className="font-bold text-[#111b21] text-sm">{activeConversa.lead_nome || 'Lead Sem Nome'}</h3>
-                <p className="text-[10px] text-[#667781] font-mono mt-0.5">{activeConversa.lead_telefone}</p>
+            <div className="p-3.5 border-b border-zinc-200 bg-[#f0f2f5] flex justify-between items-center shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shadow-sm ${getAvatarInfo(activeConversa.lead_nome).colorClass}`}>
+                  {getAvatarInfo(activeConversa.lead_nome).initials}
+                </div>
+                <div>
+                  <h3 className="font-bold text-[#111b21] text-xs leading-tight">{activeConversa.lead_nome || 'Lead Sem Nome'}</h3>
+                  <div className="flex items-center space-x-1.5 mt-0.5">
+                    <span className="text-[10px] text-[#667781] font-mono">{activeConversa.lead_telefone}</span>
+                    <span className="w-1 h-1 rounded-full bg-zinc-400" />
+                    <span className={`text-[9px] font-semibold ${is24hWindowExpired(activeConversa.janela_24h_expira_em) ? 'text-amber-600' : 'text-[#00a884]'}`}>
+                      {is24hWindowExpired(activeConversa.janela_24h_expira_em) ? 'Fora da janela de 24h' : 'Conversa ativa'}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {activeConversa.janela_24h_expira_em && (
-                <div className="text-right text-xs">
-                  <span className="text-[#667781] block text-[10px]">Expira em:</span>
-                  <span className="font-mono text-[#111b21] font-semibold">
+                <div className="text-right text-xs hidden sm:block">
+                  <span className="text-[#667781] block text-[9px]">Expiração (UTC):</span>
+                  <span className="font-mono text-[#111b21] font-semibold text-[10px]">
                     {new Date(activeConversa.janela_24h_expira_em).toLocaleString('pt-BR')}
                   </span>
                 </div>
@@ -399,9 +482,15 @@ export const Inbox: React.FC = () => {
             )}
 
             {/* Message Bubbles History */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div 
+              className="flex-1 overflow-y-auto p-4 space-y-3.5 relative"
+              style={{
+                backgroundColor: '#efeae2',
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Cpath d='M50 50c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10zM10 10c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10S0 25.523 0 20s4.477-10 10-10zm10 8c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm40 40c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8z'/%3E%3C/g%3E%3C/svg%3E")`
+              }}
+            >
               {loadingMessages && messages.length === 0 ? (
-                <div className="flex items-center justify-center py-20">
+                <div className="flex items-center justify-center py-20 bg-transparent">
                   <Loader2 size={24} className="animate-spin text-[#00a884]" />
                 </div>
               ) : (
@@ -409,18 +498,31 @@ export const Inbox: React.FC = () => {
                   const outgoing = msg.direcao === 'saida';
                   return (
                     <div key={msg.id} className={`flex ${outgoing ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[70%] rounded-xl px-3 py-2 text-sm shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] ${
+                      <div className={`max-w-[70%] rounded-xl px-3 py-1.5 text-xs shadow-[0_1px_1px_rgba(11,20,26,0.18)] relative transition-all ${
                         outgoing 
                           ? 'bg-[#d9fdd3] text-[#111b21] rounded-tr-none' 
-                          : 'bg-white text-[#111b21] rounded-tl-none border border-zinc-200/30'
+                          : 'bg-white text-[#111b21] rounded-tl-none border border-zinc-200/20'
                       }`}>
-                        <p className="leading-normal break-words whitespace-pre-wrap text-[13.5px]">{msg.conteudo}</p>
-                        <div className="text-[9px] text-right mt-1 text-[#667781] font-mono">
-                          {new Date(msg.criado_em).toLocaleTimeString('pt-BR', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                        <p className="leading-normal break-words whitespace-pre-wrap text-[13px] pr-2 pb-0.5">{msg.conteudo}</p>
+                        <div className="flex items-center justify-end space-x-1 mt-1 text-[#667781] font-mono text-[9px]">
+                          <span>
+                            {new Date(msg.criado_em).toLocaleTimeString('pt-BR', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                          {outgoing && (
+                            <span className="text-[#53bdeb] ml-0.5">
+                              <CheckCheck size={13} className="text-[#53bdeb]" />
+                            </span>
+                          )}
                         </div>
+                        {/* Little bubble tail */}
+                        {outgoing ? (
+                          <div className="absolute right-[-6px] top-0 w-0 h-0 border-t-[8px] border-t-[#d9fdd3] border-r-[8px] border-r-transparent" />
+                        ) : (
+                          <div className="absolute left-[-6px] top-0 w-0 h-0 border-t-[8px] border-t-white border-l-[8px] border-l-transparent" />
+                        )}
                       </div>
                     </div>
                   );
@@ -484,7 +586,7 @@ export const Inbox: React.FC = () => {
                   <button
                     type="submit"
                     disabled={sendingTemplate || !templateName.trim()}
-                    className="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 px-5 rounded-xl text-xs transition-colors flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                    className="bg-[#00a884] hover:bg-[#008f72] text-white font-semibold py-2.5 px-5 rounded-xl text-xs transition-colors flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50"
                   >
                     {sendingTemplate ? (
                       <Loader2 size={14} className="animate-spin" />
@@ -500,29 +602,65 @@ export const Inbox: React.FC = () => {
             ) : (
               /* Standard chat response input */
               <form onSubmit={handleSendMessage} className="p-3 border-t border-zinc-200 bg-[#f0f2f5] flex space-x-3 shrink-0 items-center">
+                {/* Visual attachments & emoji icons (static/aesthetic) */}
+                <div className="flex items-center space-x-1 text-zinc-500">
+                  <button 
+                    type="button" 
+                    title="Emojis" 
+                    className="p-2 rounded-lg hover:bg-zinc-200 hover:text-[#111b21] transition-colors cursor-pointer text-zinc-650"
+                  >
+                    <Smile size={19} />
+                  </button>
+                  <button 
+                    type="button" 
+                    title="Anexar arquivo" 
+                    className="p-2 rounded-lg hover:bg-zinc-200 hover:text-[#111b21] transition-colors cursor-pointer text-zinc-650"
+                  >
+                    <Paperclip size={19} />
+                  </button>
+                </div>
+
                 <input
                   type="text"
                   ref={replyInputRef}
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Digitar mensagem"
-                  className="flex-1 bg-white border border-zinc-200 rounded-xl py-2.5 px-4 text-[#111b21] placeholder-zinc-400 focus:outline-none focus:border-zinc-300 text-sm"
+                  placeholder="Digitar mensagem (use / para respostas rápidas)"
+                  className="flex-1 bg-white border border-zinc-200 rounded-xl py-2 px-4 text-[#111b21] placeholder-zinc-400 focus:outline-none focus:border-zinc-300 text-xs"
                 />
                 <button
                   type="submit"
                   disabled={!replyText.trim() || sending}
-                  className="bg-[#00a884] hover:bg-[#008f72] text-white p-2.5 rounded-xl flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
+                  className="bg-[#00a884] hover:bg-[#008f72] text-white p-2 rounded-xl flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
                 >
-                  {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                  {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                 </button>
               </form>
             )}
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 space-y-2 bg-[#efeae2]">
-            <User size={36} className="text-zinc-300" />
-            <p className="text-sm">Selecione uma conversa para iniciar o atendimento.</p>
+          <div 
+            className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-4 relative"
+            style={{
+              backgroundColor: '#f8f9fa',
+              borderLeft: '1px solid #e9edef'
+            }}
+          >
+            <div className="w-20 h-20 rounded-full bg-[#00a884]/10 flex items-center justify-center text-[#00a884] shadow-inner mb-2">
+              <MessageSquare size={36} />
+            </div>
+            <div className="max-w-md space-y-2">
+              <h3 className="text-base font-bold text-zinc-800">ManuTracker CRM Chat</h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Envie e receba mensagens do WhatsApp em tempo real. Os leads e o histórico de conversas são salvos e atualizados automaticamente em seu pipeline de vendas.
+              </p>
+            </div>
+            
+            <div className="absolute bottom-10 flex items-center space-x-1.5 text-zinc-400 text-[10px] font-mono">
+              <span className="w-2 h-2 rounded-full bg-[#00a884] animate-pulse" />
+              <span>Sincronização ativa via WebSocket</span>
+            </div>
           </div>
         )}
       </div>
@@ -530,49 +668,87 @@ export const Inbox: React.FC = () => {
       {/* Right Column: Lead Details & Rich Origin */}
       {activeConversa && (
         <div className="w-72 shrink-0 border-l border-zinc-200 bg-[#f8f9fa] flex flex-col h-full overflow-y-auto p-4 space-y-6">
-          <div className="border-b border-zinc-200 pb-3 flex items-center space-x-2">
+          <div className="border-b border-zinc-200 pb-3 flex items-center space-x-2 shrink-0">
             <Info size={16} className="text-[#00a884]" />
-            <h4 className="font-bold text-[#111b21] text-sm">Origem do Atendimento</h4>
+            <h4 className="font-bold text-[#111b21] text-sm">Ficha do Lead</h4>
           </div>
 
           {leadDetail ? (
             <div className="space-y-5 text-xs text-[#111b21]">
-              <div>
-                <span className="text-[10px] text-[#667781] font-semibold uppercase tracking-wider block">Nome do Lead</span>
-                <span className="text-[#111b21] font-bold text-sm block mt-0.5">{leadDetail.lead.nome || 'Não fornecido'}</span>
+              {/* Profile Card */}
+              <div className="flex flex-col items-center text-center space-y-2 pb-4 border-b border-zinc-200">
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg shadow-sm ${getAvatarInfo(leadDetail.lead.nome).colorClass}`}>
+                  {getAvatarInfo(leadDetail.lead.nome).initials}
+                </div>
+                <div>
+                  <h4 className="font-bold text-zinc-800 text-sm leading-snug">{leadDetail.lead.nome || 'Não fornecido'}</h4>
+                  <span className="font-mono text-zinc-500 text-[11px] block mt-0.5">{activeConversa.lead_telefone}</span>
+                </div>
               </div>
 
-              <div>
-                <span className="text-[10px] text-[#667781] font-semibold uppercase tracking-wider block">Localidade (IP)</span>
-                {leadDetail.lead.cidade || leadDetail.lead.estado ? (
-                  <div className="flex items-center space-x-1 mt-1 text-[#111b21]">
-                    <MapPin size={12} className="text-[#667781]" />
-                    <span>{[leadDetail.lead.cidade, leadDetail.lead.estado].filter(Boolean).join(' - ')}</span>
+              {/* Tags Section */}
+              <div className="space-y-2 pb-1">
+                <span className="text-[10px] text-[#667781] font-semibold uppercase tracking-wider block">Tags do Lead</span>
+                {leadDetail.tags && leadDetail.tags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {leadDetail.tags.map((tag) => (
+                      <span 
+                        key={tag.id}
+                        className="px-2 py-0.5 rounded-full text-[9px] font-bold text-white-force shadow-sm"
+                        style={{ backgroundColor: tag.cor || '#00a884' }}
+                      >
+                        {tag.nome}
+                      </span>
+                    ))}
                   </div>
                 ) : (
-                  <span className="text-zinc-400 block mt-0.5">Cidade não detectada</span>
+                  <span className="text-zinc-400 italic text-[11px] block">Nenhuma tag vinculada</span>
                 )}
               </div>
 
+              {/* Location */}
+              <div>
+                <span className="text-[10px] text-[#667781] font-semibold uppercase tracking-wider block">Localidade (IP)</span>
+                {leadDetail.lead.cidade || leadDetail.lead.estado ? (
+                  <div className="flex items-center space-x-1.5 mt-1 text-[#111b21] bg-white p-2.5 rounded-xl border border-zinc-200 shadow-sm">
+                    <MapPin size={13} className="text-[#00a884]" />
+                    <span className="font-semibold text-xs">{[leadDetail.lead.cidade, leadDetail.lead.estado].filter(Boolean).join(' - ')}</span>
+                  </div>
+                ) : (
+                  <span className="text-zinc-400 block mt-0.5 italic">Cidade não detectada</span>
+                )}
+              </div>
+
+              {/* Tracking Details */}
               {leadDetail.origem ? (
                 <div className="space-y-4 pt-3 border-t border-zinc-200">
                   <div className="flex items-center space-x-1 text-[#667781] font-semibold uppercase text-[10px]">
                     <Layers size={12} className="text-[#00a884]" />
-                    <span>Audiência Ads</span>
+                    <span>Rastreamento UTM</span>
                   </div>
 
-                  <div className="space-y-2 bg-white p-3 rounded-xl border border-zinc-200">
-                    <div>
-                      <span className="text-[9px] text-[#667781] block font-semibold">Origem (Source)</span>
-                      <span className="text-[#111b21] font-medium">{leadDetail.origem.utm_source || 'Direto'}</span>
+                  <div className="space-y-2 bg-white p-3 rounded-xl border border-zinc-200 shadow-sm">
+                    <div className="border-b border-zinc-100 pb-1.5">
+                      <span className="text-[9px] text-[#667781] block font-semibold uppercase">Origem (Source)</span>
+                      <span className="text-[#111b21] font-semibold text-[11px]">{leadDetail.origem.utm_source || 'Tráfego Direto'}</span>
+                    </div>
+                    {leadDetail.origem.utm_medium && (
+                      <div className="border-b border-zinc-100 pb-1.5">
+                        <span className="text-[9px] text-[#667781] block font-semibold uppercase">Meio (Medium)</span>
+                        <span className="text-[#111b21] font-medium text-[11px]">{leadDetail.origem.utm_medium}</span>
+                      </div>
+                    )}
+                    <div className="border-b border-zinc-100 pb-1.5">
+                      <span className="text-[9px] text-[#667781] block font-semibold uppercase">Campanha</span>
+                      <span className="text-[#111b21] font-medium text-[11px] truncate block max-w-[200px]" title={leadDetail.origem.utm_campaign || ''}>
+                        {leadDetail.origem.utm_campaign || '-'}
+                      </span>
                     </div>
                     <div>
-                      <span className="text-[9px] text-[#667781] block font-semibold">Campanha</span>
-                      <span className="text-[#111b21] font-medium">{leadDetail.origem.utm_campaign || '-'}</span>
-                    </div>
-                    <div>
-                      <span className="text-[9px] text-[#667781] block font-semibold">Criativo (Content)</span>
-                      <span className="text-[#111b21] font-medium truncate block max-w-[200px]">{leadDetail.origem.utm_content || '-'}</span>
+                      <span className="text-[9px] text-[#667781] block font-semibold uppercase">Anúncio (Content)</span>
+                      <span className="text-[#111b21] font-medium text-[11px] break-words block max-w-[200px]" title={leadDetail.origem.utm_content || ''}>
+                        {leadDetail.origem.utm_content || '-'}
+                      </span>
                     </div>
                   </div>
 
@@ -596,23 +772,23 @@ export const Inbox: React.FC = () => {
                   </div>
 
                   {leadDetail.origem.fbclid && (
-                    <div>
+                    <div className="pt-2">
                       <span className="text-[9px] text-[#667781] block font-semibold">Meta fbclid</span>
-                      <span className="text-[10px] font-mono text-zinc-500 break-all bg-white p-1.5 rounded border border-zinc-200 block select-all">
+                      <span className="text-[10px] font-mono text-zinc-500 break-all bg-white p-2 rounded-xl border border-zinc-200 block select-all shadow-sm">
                         {leadDetail.origem.fbclid}
                       </span>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="p-3 bg-white border border-zinc-200 rounded-xl text-center text-zinc-400 text-[10px] flex flex-col items-center space-y-1">
-                  <Globe size={14} className="text-zinc-300" />
+                <div className="p-4 bg-white border border-zinc-200 rounded-2xl shadow-sm text-center text-zinc-400 text-[10px] flex flex-col items-center space-y-1">
+                  <Globe size={16} className="text-zinc-300 mb-1" />
                   <span>Sem dados de UTM. Capturado sem link de redirecionamento.</span>
                 </div>
               )}
             </div>
           ) : (
-            <div className="flex justify-center items-center py-6">
+            <div className="flex justify-center items-center py-12">
               <Loader2 size={16} className="animate-spin text-zinc-400" />
             </div>
           )}
