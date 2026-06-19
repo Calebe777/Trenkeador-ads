@@ -213,9 +213,56 @@ export const Inbox: React.FC = () => {
     return { initials, colorClass };
   };
 
-  // WebSocket reference
+  // WebSocket reference and connection management refs
   const wsRef = useRef<WebSocket | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
+  const activeConversaRef = useRef<ConversaOut | null>(null);
+  const reconnectTimeoutRef = useRef<any>(null);
+
+  // Keep activeConversa ref synced for the persistent WebSocket callbacks
+  useEffect(() => {
+    activeConversaRef.current = activeConversa;
+  }, [activeConversa]);
+
+  const playNotificationSound = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      
+      // First beep
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      gain1.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start();
+      osc1.stop(ctx.currentTime + 0.15);
+      
+      // Second beep
+      setTimeout(() => {
+        try {
+          const osc2 = ctx.createOscillator();
+          const gain2 = ctx.createGain();
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(880, ctx.currentTime); // A5
+          gain2.gain.setValueAtTime(0.15, ctx.currentTime);
+          gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+          osc2.connect(gain2);
+          gain2.connect(ctx.destination);
+          osc2.start();
+          osc2.stop(ctx.currentTime + 0.2);
+        } catch (innerErr) {
+          console.error('Failed to play second beep:', innerErr);
+        }
+      }, 120);
+    } catch (e) {
+      console.error('Failed to play notification sound:', e);
+    }
+  };
 
   // Quick replies state
   const [quickReplies, setQuickReplies] = useState<RespostaRapida[]>([]);
@@ -300,13 +347,15 @@ export const Inbox: React.FC = () => {
     }
   }, [activeConversa, canais]);
 
-  // 1. Initial configuration & WebSocket setup
+  // 1. Load initial static configuration on mount
   useEffect(() => {
     fetchConversas();
     fetchQuickReplies();
     fetchCanais();
-    fetchQuickReplies();
+  }, []);
 
+  // 2. Establish persistent WebSocket connection on mount
+  useEffect(() => {
     const connectWebSocket = () => {
       const token = localStorage.getItem('leadtrack_token');
       if (!token) return;
@@ -334,8 +383,14 @@ export const Inbox: React.FC = () => {
             fetchConversas(true);
 
             // If incoming message belongs to active chat, refresh messages silently
-            if (activeConversa && data.conversa_id === activeConversa.id) {
-              fetchMessages(activeConversa.id, true);
+            const currentActive = activeConversaRef.current;
+            if (currentActive && data.conversa_id === currentActive.id) {
+              fetchMessages(currentActive.id, true);
+            }
+
+            // Play notification sound on incoming messages
+            if (data.direcao === 'entrada') {
+              playNotificationSound();
             }
           }
         } catch (err) {
@@ -344,9 +399,15 @@ export const Inbox: React.FC = () => {
       };
 
       ws.onclose = () => {
-        console.log('WebSocket connection closed. Retrying in 4 seconds...');
+        console.log('WebSocket connection closed. Retrying in 3 seconds...');
         setWsConnected(false);
-        setTimeout(connectWebSocket, 4000);
+        
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connectWebSocket();
+        }, 3000);
       };
 
       ws.onerror = (err) => {
@@ -358,13 +419,17 @@ export const Inbox: React.FC = () => {
     connectWebSocket();
 
     return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
       if (wsRef.current) {
-        // Remove close event handler to prevent infinite reconnection loop on unmount
+        // Remove close/error event handlers to prevent infinite reconnection loop on unmount
         wsRef.current.onclose = null;
+        wsRef.current.onerror = null;
         wsRef.current.close();
       }
     };
-  }, [activeConversa?.id]); // Re-bind message hook logic if active chat changes
+  }, []);
 
   // Load message logs when Active Chat changes
   useEffect(() => {
