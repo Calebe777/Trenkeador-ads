@@ -33,6 +33,22 @@ export const Inbox: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showFileWarning, setShowFileWarning] = useState(false);
+
+  const popularEmojis = [
+    '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', 
+    '🙂', '😉', '😌', '😍', '🥰', '😘', '😜', '🤪', '🤔', '👍', 
+    '👎', '👊', '✊', '✌️', '👌', '🤞', '🤙', '👏', '🙌', '🙏', 
+    '❤️', '💔', '🔥', '✨', '🎉', '🚀', '💡', '📞', '💬', '📍'
+  ];
+
+  const insertEmoji = (emoji: string) => {
+    setReplyText(prev => prev + emoji);
+    setTimeout(() => {
+      replyInputRef.current?.focus();
+    }, 10);
+  };
 
   const getAvatarInfo = (nome: string | null) => {
     const defaultName = nome || 'Lead s/ Nome';
@@ -262,6 +278,7 @@ export const Inbox: React.FC = () => {
 
     setSending(true);
     setSendError(null);
+    setShowEmojiPicker(false);
     const textToSend = replyText.trim();
 
     try {
@@ -602,22 +619,47 @@ export const Inbox: React.FC = () => {
             ) : (
               /* Standard chat response input */
               <form onSubmit={handleSendMessage} className="p-3 border-t border-zinc-200 bg-[#f0f2f5] flex space-x-3 shrink-0 items-center">
-                {/* Visual attachments & emoji icons (static/aesthetic) */}
-                <div className="flex items-center space-x-1 text-zinc-500">
+                {/* Emojis & attachment actions */}
+                <div className="flex items-center space-x-1 text-zinc-500 relative">
                   <button 
                     type="button" 
                     title="Emojis" 
-                    className="p-2 rounded-lg hover:bg-zinc-200 hover:text-[#111b21] transition-colors cursor-pointer text-zinc-650"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className={`p-2 rounded-lg hover:bg-zinc-200 hover:text-[#111b21] transition-colors cursor-pointer ${
+                      showEmojiPicker ? 'bg-zinc-200 text-[#111b21]' : 'text-zinc-650'
+                    }`}
                   >
                     <Smile size={19} />
                   </button>
                   <button 
                     type="button" 
                     title="Anexar arquivo" 
+                    onClick={() => setShowFileWarning(true)}
                     className="p-2 rounded-lg hover:bg-zinc-200 hover:text-[#111b21] transition-colors cursor-pointer text-zinc-650"
                   >
                     <Paperclip size={19} />
                   </button>
+
+                  {/* Emoji Picker Popover */}
+                  {showEmojiPicker && (
+                    <div className="absolute bottom-12 left-0 bg-white border border-zinc-200 rounded-2xl shadow-2xl p-3 z-20 w-60">
+                      <div className="text-[10px] text-zinc-400 font-semibold mb-2 uppercase tracking-wider">
+                        Emojis Populares
+                      </div>
+                      <div className="grid grid-cols-8 gap-2">
+                        {popularEmojis.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => insertEmoji(emoji)}
+                            className="text-lg hover:scale-125 transition-transform cursor-pointer p-0.5"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <input
@@ -792,6 +834,35 @@ export const Inbox: React.FC = () => {
               <Loader2 size={16} className="animate-spin text-zinc-400" />
             </div>
           )}
+        </div>
+      )}
+      {/* File upload warning modal */}
+      {showFileWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white border border-zinc-200 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+            <div className="flex items-center space-x-2 text-amber-600">
+              <AlertTriangle size={24} />
+              <h4 className="font-bold text-zinc-800 text-sm">Upload de Arquivo (WhatsApp)</h4>
+            </div>
+            <p className="text-xs text-zinc-550 leading-relaxed">
+              O envio de mídias/arquivos não é suportado pelo backend atual. O endpoint de resposta do CRM aceita apenas mensagens de texto puro:
+            </p>
+            <div className="bg-zinc-950 p-2.5 rounded-xl border border-zinc-800 text-[10px] font-mono text-zinc-450 text-white-force">
+              POST /conversas/{"{"}id{"}"}/responder
+              {"\n"}{"\n"}
+              {"{"} "texto": "sua mensagem" {"}"}
+            </div>
+            <p className="text-xs text-zinc-550 leading-relaxed">
+              Para ativar o envio de fotos/arquivos, o backend precisa implementar uma nova rota que processe o upload de mídias e integre com a API de Mídia do WhatsApp Cloud.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowFileWarning(false)}
+              className="w-full bg-[#00a884] hover:bg-[#008f72] text-white-force font-semibold py-2 rounded-xl text-xs transition-colors cursor-pointer"
+            >
+              Entendi
+            </button>
+          </div>
         </div>
       )}
     </div>
