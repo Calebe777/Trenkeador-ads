@@ -42,7 +42,6 @@ export const Dashboard: React.FC = () => {
   const [dispositivos, setDispositivos] = useState<AnalyticsDispositivos | null>(null);
   const [localizacao, setLocalizacao] = useState<AnalyticsLocalizacao | null>(null);
   const [porCriativo, setPorCriativo] = useState<AnalyticsPorCriativoArray>([]);
-  const [activeGeoTab, setActiveGeoTab] = useState<'paises' | 'estados' | 'cidades'>('paises');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -136,7 +135,7 @@ export const Dashboard: React.FC = () => {
       value 
     }))
     .sort((a, b) => b.value - a.value)
-    .slice(0, 5) : [];
+    .slice(0, 10) : [];
 
   const estadosBarData = localizacao?.estados ? Object.entries(localizacao.estados)
     .map(([name, value]) => ({ 
@@ -144,7 +143,7 @@ export const Dashboard: React.FC = () => {
       value 
     }))
     .sort((a, b) => b.value - a.value)
-    .slice(0, 5) : [];
+    .slice(0, 10) : [];
 
   const cidadesBarData = localizacao?.cidades ? Object.entries(localizacao.cidades)
     .map(([name, value]) => ({ 
@@ -152,7 +151,16 @@ export const Dashboard: React.FC = () => {
       value 
     }))
     .sort((a, b) => b.value - a.value)
-    .slice(0, 5) : [];
+    .slice(0, 10) : [];
+
+  const totalPaisCliques = paisesBarData.reduce((acc, curr) => acc + curr.value, 0);
+  const maxPaisCliques = paisesBarData.length > 0 ? Math.max(...paisesBarData.map(d => d.value)) : 1;
+
+  const totalEstadoCliques = estadosBarData.reduce((acc, curr) => acc + curr.value, 0);
+  const maxEstadoCliques = estadosBarData.length > 0 ? Math.max(...estadosBarData.map(d => d.value)) : 1;
+
+  const totalCidadeCliques = cidadesBarData.reduce((acc, curr) => acc + curr.value, 0);
+  const maxCidadeCliques = cidadesBarData.length > 0 ? Math.max(...cidadesBarData.map(d => d.value)) : 1;
 
   return (
     <div className="space-y-10">
@@ -360,117 +368,154 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Operating Systems & Browsers list grids */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
-          <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Sistemas Operacionais (Top)</h4>
-          <div className="space-y-3">
-            {osPieData.length > 0 ? (
-              osPieData.map((os) => (
-                <div key={os.name} className="flex justify-between items-center bg-zinc-950 p-3 rounded-xl border border-zinc-800 text-xs">
-                  <span className="font-semibold text-zinc-300">{os.name}</span>
-                  <span className="font-mono text-zinc-400">{os.value} cliques</span>
-                </div>
-              ))
-            ) : (
-              <div className="text-zinc-600 text-xs">Nenhum dado</div>
-            )}
+        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Sistemas Operacionais (Top)</h4>
+            <div className="space-y-3">
+              {osPieData.length > 0 ? (
+                osPieData.map((os) => (
+                  <div key={os.name} className="flex justify-between items-center bg-zinc-950 p-3 rounded-xl border border-zinc-800 text-xs">
+                    <span className="font-semibold text-zinc-300">{os.name}</span>
+                    <span className="font-mono text-zinc-400">{os.value} cliques</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-zinc-600 text-xs">Nenhum dado</div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Navegadores de Acesso</h4>
+            <div className="space-y-3">
+              {navPieData.length > 0 ? (
+                navPieData.map((nav) => (
+                  <div key={nav.name} className="flex justify-between items-center bg-zinc-950 p-3 rounded-xl border border-zinc-800 text-xs">
+                    <span className="font-semibold text-zinc-300 truncate max-w-[150px]">{nav.name}</span>
+                    <span className="font-mono text-zinc-400">{nav.value} cliques</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-zinc-600 text-xs">Nenhum dado</div>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
-          <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Navegadores de Acesso</h4>
-          <div className="space-y-3">
-            {navPieData.length > 0 ? (
-              navPieData.map((nav) => (
-                <div key={nav.name} className="flex justify-between items-center bg-zinc-950 p-3 rounded-xl border border-zinc-800 text-xs">
-                  <span className="font-semibold text-zinc-300 truncate max-w-[150px]">{nav.name}</span>
-                  <span className="font-mono text-zinc-400">{nav.value} cliques</span>
-                </div>
-              ))
-            ) : (
-              <div className="text-zinc-600 text-xs">Nenhum dado</div>
-            )}
+        {/* Geographical Origin Section - Side by Side (3 columns!) */}
+        <div className="lg:col-span-3 bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
+          <div className="mb-6 flex justify-between items-center">
+            <div>
+              <h4 className="text-lg font-bold text-white mb-1">Origem Geográfica</h4>
+              <p className="text-sm text-zinc-500">Distribuição do tráfego capturado por país, estado e cidade.</p>
+            </div>
+            <Globe size={20} className="text-zinc-500" />
           </div>
-        </div>
 
-        {/* Location maps tabbed */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 flex flex-col justify-between">
-          <div>
-            <div className="mb-4 flex justify-between items-center">
-              <h4 className="text-sm font-bold text-white uppercase tracking-wider">Origem Geográfica</h4>
-              <Globe size={16} className="text-zinc-500" />
-            </div>
-
-            {/* Tab buttons */}
-            <div className="flex bg-zinc-950 p-1 rounded-xl border border-zinc-800 mb-4 text-xs font-semibold gap-1">
-              <button
-                type="button"
-                onClick={() => setActiveGeoTab('paises')}
-                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer text-center ${
-                  activeGeoTab === 'paises' ? 'bg-[#00a884] text-white' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                Países
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveGeoTab('estados')}
-                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer text-center ${
-                  activeGeoTab === 'estados' ? 'bg-[#00a884] text-white' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                Estados
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveGeoTab('cidades')}
-                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer text-center ${
-                  activeGeoTab === 'cidades' ? 'bg-[#00a884] text-white' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                Cidades
-              </button>
-            </div>
-
-            {/* List based on selected tab */}
-            <div className="space-y-2.5">
-              {activeGeoTab === 'paises' && (
-                paisesBarData.length > 0 ? (
-                  paisesBarData.map((item) => (
-                    <div key={item.name} className="flex justify-between items-center bg-zinc-950 p-3 rounded-xl border border-zinc-800 text-xs">
-                      <span className="font-semibold text-zinc-300">{item.name}</span>
-                      <span className="font-mono text-[#00a884] font-semibold">{item.value} cliques</span>
-                    </div>
-                  ))
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Países */}
+            <div className="space-y-4">
+              <h5 className="text-xs font-bold text-white uppercase tracking-wider mb-2 border-b border-zinc-800 pb-2 flex justify-between">
+                <span>Países</span>
+                <span className="text-zinc-500 font-mono text-[10px]">{paisesBarData.length} registros</span>
+              </h5>
+              <div className="space-y-3.5 max-h-96 overflow-y-auto pr-1">
+                {paisesBarData.length > 0 ? (
+                  paisesBarData.map((item) => {
+                    const pct = totalPaisCliques > 0 ? (item.value / totalPaisCliques) * 100 : 0;
+                    const barWidth = maxPaisCliques > 0 ? (item.value / maxPaisCliques) * 100 : 0;
+                    return (
+                      <div key={item.name} className="space-y-1">
+                        <div className="flex justify-between items-center text-xs font-semibold">
+                          <span className="text-zinc-300 truncate pr-2" title={item.name}>{item.name}</span>
+                          <span className="font-mono text-zinc-500 whitespace-nowrap text-[11px]">
+                            <span className="text-violet-600 font-bold mr-1">{item.value}</span> 
+                            clique{item.value !== 1 ? 's' : ''} ({pct.toFixed(0)}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                          <div 
+                            className="bg-violet-600 h-1.5 rounded-full transition-all duration-500" 
+                            style={{ width: `${barWidth}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
                 ) : (
                   <div className="text-zinc-500 text-xs text-center py-6">Sem dados de países</div>
-                )
-              )}
+                )}
+              </div>
+            </div>
 
-              {activeGeoTab === 'estados' && (
-                estadosBarData.length > 0 ? (
-                  estadosBarData.map((item) => (
-                    <div key={item.name} className="flex justify-between items-center bg-zinc-950 p-3 rounded-xl border border-zinc-800 text-xs">
-                      <span className="font-semibold text-zinc-300">{item.name}</span>
-                      <span className="font-mono text-[#00a884] font-semibold">{item.value} cliques</span>
-                    </div>
-                  ))
+            {/* Estados */}
+            <div className="space-y-4">
+              <h5 className="text-xs font-bold text-white uppercase tracking-wider mb-2 border-b border-zinc-800 pb-2 flex justify-between">
+                <span>Estados</span>
+                <span className="text-zinc-500 font-mono text-[10px]">{estadosBarData.length} registros</span>
+              </h5>
+              <div className="space-y-3.5 max-h-96 overflow-y-auto pr-1">
+                {estadosBarData.length > 0 ? (
+                  estadosBarData.map((item) => {
+                    const pct = totalEstadoCliques > 0 ? (item.value / totalEstadoCliques) * 100 : 0;
+                    const barWidth = maxEstadoCliques > 0 ? (item.value / maxEstadoCliques) * 100 : 0;
+                    return (
+                      <div key={item.name} className="space-y-1">
+                        <div className="flex justify-between items-center text-xs font-semibold">
+                          <span className="text-zinc-300 truncate pr-2" title={item.name}>{item.name}</span>
+                          <span className="font-mono text-zinc-500 whitespace-nowrap text-[11px]">
+                            <span className="text-violet-600 font-bold mr-1">{item.value}</span> 
+                            clique{item.value !== 1 ? 's' : ''} ({pct.toFixed(0)}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                          <div 
+                            className="bg-violet-600 h-1.5 rounded-full transition-all duration-500" 
+                            style={{ width: `${barWidth}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
                 ) : (
                   <div className="text-zinc-500 text-xs text-center py-6">Sem dados de estados</div>
-                )
-              )}
+                )}
+              </div>
+            </div>
 
-              {activeGeoTab === 'cidades' && (
-                cidadesBarData.length > 0 ? (
-                  cidadesBarData.map((item) => (
-                    <div key={item.name} className="flex justify-between items-center bg-zinc-950 p-3 rounded-xl border border-zinc-800 text-xs">
-                      <span className="font-semibold text-zinc-300">{item.name}</span>
-                      <span className="font-mono text-[#00a884] font-semibold">{item.value} cliques</span>
-                    </div>
-                  ))
+            {/* Cidades */}
+            <div className="space-y-4">
+              <h5 className="text-xs font-bold text-white uppercase tracking-wider mb-2 border-b border-zinc-800 pb-2 flex justify-between">
+                <span>Cidades</span>
+                <span className="text-zinc-500 font-mono text-[10px]">{cidadesBarData.length} registros</span>
+              </h5>
+              <div className="space-y-3.5 max-h-96 overflow-y-auto pr-1">
+                {cidadesBarData.length > 0 ? (
+                  cidadesBarData.map((item) => {
+                    const pct = totalCidadeCliques > 0 ? (item.value / totalCidadeCliques) * 100 : 0;
+                    const barWidth = maxCidadeCliques > 0 ? (item.value / maxCidadeCliques) * 100 : 0;
+                    return (
+                      <div key={item.name} className="space-y-1">
+                        <div className="flex justify-between items-center text-xs font-semibold">
+                          <span className="text-zinc-300 truncate pr-2" title={item.name}>{item.name}</span>
+                          <span className="font-mono text-zinc-500 whitespace-nowrap text-[11px]">
+                            <span className="text-violet-600 font-bold mr-1">{item.value}</span> 
+                            clique{item.value !== 1 ? 's' : ''} ({pct.toFixed(0)}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                          <div 
+                            className="bg-violet-600 h-1.5 rounded-full transition-all duration-500" 
+                            style={{ width: `${barWidth}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
                 ) : (
                   <div className="text-zinc-500 text-xs text-center py-6">Sem dados de cidades</div>
-                )
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
