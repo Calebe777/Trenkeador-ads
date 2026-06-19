@@ -22,7 +22,8 @@ import {
   Check,
   Edit2,
   Clock,
-  FileText
+  FileText,
+  Trash2
 } from 'lucide-react';
 
 export const Leads: React.FC = () => {
@@ -136,6 +137,34 @@ export const Leads: React.FC = () => {
     } catch (err) {
       console.error('Error updating lead info', err);
       alert('Erro ao atualizar informações do lead.');
+    }
+  };
+
+  const handleDeleteLead = async (id: string, name: string) => {
+    if (!confirm(`ATENÇÃO: Tem certeza que deseja excluir o lead "${name}"?\nIsso apagará permanentemente a conversa e todo o histórico de mensagens dele!`)) return;
+    try {
+      await apiClient.delete(`/leads/${id}`);
+      setSelectedLeadId(null);
+      setLeadDetail(null);
+      fetchInitialData();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.detail || 'Erro ao excluir lead.');
+    }
+  };
+
+  const handleDeleteGlobalTag = async (id: string, name: string) => {
+    if (!confirm(`Deseja excluir a tag global "${name}" de todos os leads?`)) return;
+    try {
+      await apiClient.delete(`/tags/${id}`);
+      fetchInitialData();
+      if (selectedLeadId) {
+        const response = await apiClient.get<LeadDetalhe>(`/leads/${selectedLeadId}`);
+        setLeadDetail(response.data);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.detail || 'Erro ao excluir tag global.');
     }
   };
 
@@ -385,12 +414,23 @@ export const Leads: React.FC = () => {
                 <Info size={18} className="text-violet-400" />
                 <span>Perfil do Lead</span>
               </h3>
-              <button 
-                onClick={() => setSelectedLeadId(null)}
-                className="text-zinc-500 hover:text-white p-1 hover:bg-zinc-800 rounded-lg cursor-pointer"
-              >
-                <X size={20} />
-              </button>
+              <div className="flex items-center space-x-2">
+                {leadDetail && (
+                  <button
+                    onClick={() => handleDeleteLead(leadDetail.lead.id, leadDetail.lead.nome || 'Lead s/ Nome')}
+                    title="Excluir Lead"
+                    className="text-zinc-500 hover:text-red-500 p-1 hover:bg-zinc-800/50 rounded-lg cursor-pointer"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+                <button 
+                  onClick={() => setSelectedLeadId(null)}
+                  className="text-zinc-500 hover:text-white p-1 hover:bg-zinc-800 rounded-lg cursor-pointer"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             {loadingDetail ? (
@@ -575,6 +615,33 @@ export const Leads: React.FC = () => {
                       </select>
                     </div>
                   )}
+
+                  {/* Global tags list with delete buttons */}
+                  <div className="mt-4 pt-3 border-t border-zinc-800/40 text-xs">
+                    <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider block mb-2">Excluir Tags Globais</span>
+                    {allTags.length === 0 ? (
+                      <span className="text-[10px] text-zinc-600 block">Nenhuma tag cadastrada</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {allTags.map(tag => (
+                          <span 
+                            key={tag.id} 
+                            style={{ backgroundColor: `${tag.cor}10`, borderColor: `${tag.cor}30`, color: tag.cor }}
+                            className="text-[9px] font-semibold py-0.5 px-2 rounded-lg border flex items-center animate-fade-in"
+                          >
+                            <span>{tag.nome}</span>
+                            <button 
+                              onClick={() => handleDeleteGlobalTag(tag.id, tag.nome)}
+                              className="ml-1 opacity-70 hover:opacity-100 hover:scale-105 text-red-500 cursor-pointer"
+                              title="Excluir tag globalmente"
+                            >
+                              <Trash2 size={10} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* 3. Follow-up Scheduler */}

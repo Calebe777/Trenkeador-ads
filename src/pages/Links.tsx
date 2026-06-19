@@ -9,7 +9,9 @@ import {
   ExternalLink, 
   Loader2, 
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 
 export const Links: React.FC = () => {
@@ -65,6 +67,32 @@ export const Links: React.FC = () => {
     }
   };
 
+  const [editingLink, setEditingLink] = useState<LinkOut | null>(null);
+
+  const handleEditClick = (link: LinkOut) => {
+    setEditingLink(link);
+    setCodigoCurto(link.codigo_curto);
+    setDestinoNumero(link.destino_numero);
+    setMensagemPrefill(link.mensagem_prefill || '');
+    setUtmSource(link.utm_source || '');
+    setUtmMedium(link.utm_medium || '');
+    setUtmCampaign(link.utm_campaign || '');
+    setUtmContent(link.utm_content || '');
+    setUtmTerm(link.utm_term || '');
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteLink = async (id: string, shortCode: string) => {
+    if (!confirm(`Tem certeza que deseja excluir o link curto '#${shortCode}'?`)) return;
+    try {
+      await apiClient.delete(`/links/${id}`);
+      fetchLinks();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.detail || 'Falha ao excluir o link curto.');
+    }
+  };
+
   const resetForm = () => {
     setCodigoCurto('');
     setDestinoNumero('');
@@ -75,6 +103,7 @@ export const Links: React.FC = () => {
     setUtmContent('');
     setUtmTerm('');
     setFormError(null);
+    setEditingLink(null);
   };
 
   const handleCreateLink = async (e: React.FormEvent) => {
@@ -94,7 +123,11 @@ export const Links: React.FC = () => {
     };
 
     try {
-      await apiClient.post('/links', payload);
+      if (editingLink) {
+        await apiClient.patch(`/links/${editingLink.id}`, payload);
+      } else {
+        await apiClient.post('/links', payload);
+      }
       setIsModalOpen(false);
       resetForm();
       fetchLinks();
@@ -177,8 +210,26 @@ export const Links: React.FC = () => {
             <div key={link.id} className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 flex flex-col justify-between hover:border-zinc-700 transition-all duration-200">
               <div className="space-y-4">
                 <div className="flex justify-between items-start">
-                  <div className="px-3 py-1 bg-violet-600/10 border border-violet-500/20 rounded-xl text-violet-400 text-sm font-semibold">
-                    #{link.codigo_curto}
+                  <div className="flex flex-col space-y-1.5">
+                    <div className="px-3 py-1 bg-violet-600/10 border border-violet-500/20 rounded-xl text-violet-400 text-sm font-semibold w-fit">
+                      #{link.codigo_curto}
+                    </div>
+                    <div className="flex items-center space-x-2.5 pt-1">
+                      <button
+                        onClick={() => handleEditClick(link)}
+                        title="Editar link"
+                        className="text-zinc-400 hover:text-[#00a884] transition-colors cursor-pointer"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteLink(link.id, link.codigo_curto)}
+                        title="Excluir link"
+                        className="text-zinc-400 hover:text-red-500 transition-colors cursor-pointer"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                   <div className="text-right">
                     <span className="text-2xl font-bold text-white">{link.cliques}</span>
@@ -263,8 +314,8 @@ export const Links: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
           <div className="relative w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl p-6 md:p-8 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold text-white mb-2">Criar Link Rastreável</h2>
-            <p className="text-zinc-500 text-sm mb-6">Insira os parâmetros de redirecionamento e as UTMs do Meta/Google Ads.</p>
+            <h2 className="text-xl font-bold text-white mb-2">{editingLink ? 'Editar Link Rastreável' : 'Criar Link Rastreável'}</h2>
+            <p className="text-zinc-500 text-sm mb-6">{editingLink ? 'Corrija os parâmetros de redirecionamento e as UTMs do link.' : 'Insira os parâmetros de redirecionamento e as UTMs do Meta/Google Ads.'}</p>
 
             {formError && (
               <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center space-x-2">
@@ -415,7 +466,7 @@ export const Links: React.FC = () => {
                       <span>Salvando...</span>
                     </>
                   ) : (
-                    <span>Salvar Link</span>
+                    <span>{editingLink ? 'Salvar Alterações' : 'Salvar Link'}</span>
                   )}
                 </button>
               </div>

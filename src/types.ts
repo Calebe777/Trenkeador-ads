@@ -256,6 +256,9 @@ export interface AnalyticsDispositivos {
 }
 
 export interface AnalyticsLocalizacao {
+  paises: {
+    [key: string]: number;
+  };
   estados: {
     [key: string]: number;
   };

@@ -9,7 +9,8 @@ import {
   XCircle,
   Clock,
   ArrowRight,
-  TrendingUp
+  TrendingUp,
+  Trash2
 } from 'lucide-react';
 
 export const KanbanBoard: React.FC = () => {
@@ -185,6 +186,17 @@ export const KanbanBoard: React.FC = () => {
     }
   };
 
+  const handleDeleteNegocio = async (id: string, leadNome: string) => {
+    if (!confirm(`Tem certeza que deseja excluir o negócio de "${leadNome}" do CRM?`)) return;
+    try {
+      await apiClient.delete(`/negocios/${id}`);
+      fetchData();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.detail || 'Erro ao excluir negócio.');
+    }
+  };
+
   return (
     <div className="h-full flex flex-col space-y-6">
       {/* Title Header */}
@@ -288,28 +300,37 @@ export const KanbanBoard: React.FC = () => {
                         </div>
 
                         {/* Hover Quick Actions */}
-                        {deal.status === 'aberto' && (
-                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
-                            <button
-                              onClick={() => {
-                                setSelectedNegocio(deal);
-                                setGanhoValue(deal.valor ? String(deal.valor) : '');
-                                setIsGanhoModalOpen(true);
-                              }}
-                              title="Marcar Ganho"
-                              className="p-1 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 border border-emerald-500/20 hover:text-white transition-colors cursor-pointer"
-                            >
-                              <CheckCircle size={12} />
-                            </button>
-                            <button
-                              onClick={() => handleMarkPerdido(deal)}
-                              title="Marcar Perdido"
-                              className="p-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500 border border-red-500/20 hover:text-white transition-colors cursor-pointer"
-                            >
-                              <XCircle size={12} />
-                            </button>
-                          </div>
-                        )}
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+                          {deal.status === 'aberto' && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setSelectedNegocio(deal);
+                                  setGanhoValue(deal.valor ? String(deal.valor) : '');
+                                  setIsGanhoModalOpen(true);
+                                }}
+                                title="Marcar Ganho"
+                                className="p-1 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 border border-emerald-500/20 hover:text-white transition-colors cursor-pointer"
+                              >
+                                <CheckCircle size={12} />
+                              </button>
+                              <button
+                                onClick={() => handleMarkPerdido(deal)}
+                                title="Marcar Perdido"
+                                className="p-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500 border border-red-500/20 hover:text-white transition-colors cursor-pointer"
+                              >
+                                <XCircle size={12} />
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => handleDeleteNegocio(deal.id, deal.lead_nome || 'Lead s/ Nome')}
+                            title="Excluir Negócio"
+                            className="p-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500 border border-red-500/20 hover:text-white transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}

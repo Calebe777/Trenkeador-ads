@@ -15,7 +15,8 @@ import {
   Key,
   Zap,
   Globe,
-  Lock
+  Lock,
+  Trash2
 } from 'lucide-react';
 
 export const Settings: React.FC = () => {
@@ -79,6 +80,19 @@ export const Settings: React.FC = () => {
       setCanais(canaisRes.data);
       setUsuarios(usuariosRes.data);
       setQuickReplies(quickRes.data);
+
+      // Load Meta config
+      try {
+        const metaRes = await apiClient.get<MetaConfig>('/meta/config');
+        if (metaRes.data) {
+          setPixelId(metaRes.data.pixel_id || '');
+          setCapiAccessToken(metaRes.data.capi_access_token || '');
+          setAdAccountId(metaRes.data.ad_account_id || '');
+          setTestEventCode(metaRes.data.test_event_code || '');
+        }
+      } catch (metaErr) {
+        console.warn('Conversions API config not yet set or not readable:', metaErr);
+      }
     } catch (err) {
       console.error('Failed to load settings configuration data', err);
     } finally {
@@ -227,6 +241,50 @@ export const Settings: React.FC = () => {
     }
   };
 
+  const handleClearMeta = async () => {
+    if (!confirm('Tem certeza que deseja limpar a configuração do Meta?')) return;
+    setSubmittingMeta(true);
+    try {
+      await apiClient.delete('/meta/config');
+      setPixelId('');
+      setCapiAccessToken('');
+      setAdAccountId('');
+      setTestEventCode('');
+      setMetaSuccess(true);
+      setTimeout(() => setMetaSuccess(false), 3000);
+      alert('Configuração do Meta limpa com sucesso!');
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.detail || 'Erro ao limpar configurações do Meta.');
+    } finally {
+      setSubmittingMeta(false);
+    }
+  };
+
+  const handleDeleteCanal = async (id: string, name: string) => {
+    if (!confirm(`Tem certeza que deseja excluir o canal de WhatsApp "${name}"?`)) return;
+    try {
+      await apiClient.delete(`/whatsapp/canais/${id}`);
+      const canaisRes = await apiClient.get<CanalOut[]>('/whatsapp/canais');
+      setCanais(canaisRes.data);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.detail || 'Erro ao excluir canal.');
+    }
+  };
+
+  const handleDeleteQuickReply = async (id: string, shortcut: string) => {
+    if (!confirm(`Tem certeza que deseja excluir a resposta rápida "/${shortcut}"?`)) return;
+    try {
+      await apiClient.delete(`/respostas-rapidas/${id}`);
+      const qRes = await apiClient.get<RespostaRapida[]>('/respostas-rapidas');
+      setQuickReplies(qRes.data);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.detail || 'Erro ao excluir resposta rápida.');
+    }
+  };
+
   const copyToClipboard = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
     setCopiedText(type);
@@ -324,14 +382,24 @@ export const Settings: React.FC = () => {
                     </span>
                   )}
                 </span>
-                <button
-                  type="submit"
-                  disabled={submittingMeta}
-                  className="bg-violet-600 hover:bg-violet-700 text-white font-semibold py-2.5 px-5 rounded-xl text-sm transition-colors cursor-pointer flex items-center space-x-2"
-                >
-                  {submittingMeta ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                  <span>Salvar Integração</span>
-                </button>
+                <div className="flex items-center space-x-3">
+                  <button
+                    type="button"
+                    onClick={handleClearMeta}
+                    disabled={submittingMeta}
+                    className="bg-red-500/10 hover:bg-red-600 text-red-500 hover:text-white font-semibold py-2.5 px-5 rounded-xl text-sm transition-colors border border-red-500/20 hover:border-red-600 cursor-pointer"
+                  >
+                    Limpar Integração
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingMeta}
+                    className="bg-violet-600 hover:bg-violet-700 text-white font-semibold py-2.5 px-5 rounded-xl text-sm transition-colors cursor-pointer flex items-center space-x-2"
+                  >
+                    {submittingMeta ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                    <span>Salvar Integração</span>
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -519,8 +587,15 @@ export const Settings: React.FC = () => {
                     <div key={qr.id} className="bg-zinc-950 p-3 rounded-xl border border-zinc-800 flex justify-between items-center text-xs">
                       <div className="min-w-0">
                         <span className="font-mono text-violet-400 font-semibold block">/{qr.atalho}</span>
-                        <p className="text-zinc-400 truncate max-w-[200px] mt-0.5" title={qr.texto}>{qr.texto}</p>
+                        <p className="text-zinc-400 truncate max-w-[160px] mt-0.5" title={qr.texto}>{qr.texto}</p>
                       </div>
+                      <button
+                        onClick={() => handleDeleteQuickReply(qr.id, qr.atalho)}
+                        title="Excluir Resposta Rápida"
+                        className="text-zinc-500 hover:text-red-500 p-1.5 hover:bg-zinc-900 rounded-lg cursor-pointer"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -649,8 +724,8 @@ export const Settings: React.FC = () => {
             ) : (
               <div className="space-y-3">
                 {canais.map((canal) => (
-                  <div key={canal.id} className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-3">
-                    <div className="flex justify-between items-center">
+                  <div key={canal.id} className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-3 relative group">
+                    <div className="flex justify-between items-center pr-6">
                       <span className="font-bold text-white text-sm">{canal.nome}</span>
                       <span className={`text-[9px] font-semibold py-0.5 px-2 rounded-full border ${
                         canal.ativo ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' : 'bg-red-500/10 text-red-400 border-red-500/25'
@@ -666,16 +741,25 @@ export const Settings: React.FC = () => {
                       )}
                     </div>
 
-                    <button
-                      onClick={() => {
-                        setRenewingCanal(canal);
-                        setRenewToken('');
-                      }}
-                      className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold py-2 px-3 rounded-xl border border-zinc-800 hover:border-zinc-700 text-xs transition-colors cursor-pointer flex justify-center items-center space-x-1.5"
-                    >
-                      <Key size={12} />
-                      <span>Renovar Token Meta</span>
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setRenewingCanal(canal);
+                          setRenewToken('');
+                        }}
+                        className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold py-2 px-3 rounded-xl border border-zinc-800 hover:border-zinc-700 text-xs transition-colors cursor-pointer flex justify-center items-center space-x-1.5"
+                      >
+                        <Key size={12} />
+                        <span>Renovar Token Meta</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCanal(canal.id, canal.nome)}
+                        title="Apagar Canal"
+                        className="bg-red-500/10 hover:bg-red-600 text-red-500 hover:text-white p-2 rounded-xl border border-red-500/20 hover:border-red-600 transition-colors cursor-pointer flex items-center justify-center"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

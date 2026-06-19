@@ -42,6 +42,7 @@ export const Dashboard: React.FC = () => {
   const [dispositivos, setDispositivos] = useState<AnalyticsDispositivos | null>(null);
   const [localizacao, setLocalizacao] = useState<AnalyticsLocalizacao | null>(null);
   const [porCriativo, setPorCriativo] = useState<AnalyticsPorCriativoArray>([]);
+  const [activeGeoTab, setActiveGeoTab] = useState<'paises' | 'estados' | 'cidades'>('paises');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -129,13 +130,27 @@ export const Dashboard: React.FC = () => {
     .filter(d => d.value > 0) : [];
 
   // Format Location Data
-  const estadosBarData = localizacao ? Object.entries(localizacao.estados)
-    .map(([name, value]) => ({ name, value }))
+  const paisesBarData = localizacao?.paises ? Object.entries(localizacao.paises)
+    .map(([name, value]) => ({ 
+      name: name === '?' ? 'Desconhecido' : name, 
+      value 
+    }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 5) : [];
 
-  const cidadesBarData = localizacao ? Object.entries(localizacao.cidades)
-    .map(([name, value]) => ({ name, value }))
+  const estadosBarData = localizacao?.estados ? Object.entries(localizacao.estados)
+    .map(([name, value]) => ({ 
+      name: name === '?' ? 'Desconhecido' : name, 
+      value 
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5) : [];
+
+  const cidadesBarData = localizacao?.cidades ? Object.entries(localizacao.cidades)
+    .map(([name, value]) => ({ 
+      name: name === '?' ? 'Desconhecido' : name, 
+      value 
+    }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 5) : [];
 
@@ -377,47 +392,94 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Location maps */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
-          <div className="mb-4 flex justify-between items-center">
-            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Top Estados</h4>
-            <Globe size={16} className="text-zinc-500" />
-          </div>
-          <div className="space-y-3">
-            {estadosBarData.length > 0 ? (
-              estadosBarData.map((est) => (
-                <div key={est.name} className="flex justify-between items-center bg-zinc-950 p-3 rounded-xl border border-zinc-800 text-xs">
-                  <span className="font-semibold text-zinc-300">{est.name}</span>
-                  <span className="font-mono text-violet-400 font-semibold">{est.value} leads</span>
-                </div>
-              ))
-            ) : (
-              <div className="text-zinc-600 text-xs">Sem dados geográficos</div>
-            )}
+        {/* Location maps tabbed */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 flex flex-col justify-between">
+          <div>
+            <div className="mb-4 flex justify-between items-center">
+              <h4 className="text-sm font-bold text-white uppercase tracking-wider">Origem Geográfica</h4>
+              <Globe size={16} className="text-zinc-500" />
+            </div>
+
+            {/* Tab buttons */}
+            <div className="flex bg-zinc-950 p-1 rounded-xl border border-zinc-800 mb-4 text-xs font-semibold gap-1">
+              <button
+                type="button"
+                onClick={() => setActiveGeoTab('paises')}
+                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer text-center ${
+                  activeGeoTab === 'paises' ? 'bg-[#00a884] text-white' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Países
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveGeoTab('estados')}
+                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer text-center ${
+                  activeGeoTab === 'estados' ? 'bg-[#00a884] text-white' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Estados
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveGeoTab('cidades')}
+                className={`flex-1 py-1.5 rounded-lg transition-colors cursor-pointer text-center ${
+                  activeGeoTab === 'cidades' ? 'bg-[#00a884] text-white' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Cidades
+              </button>
+            </div>
+
+            {/* List based on selected tab */}
+            <div className="space-y-2.5">
+              {activeGeoTab === 'paises' && (
+                paisesBarData.length > 0 ? (
+                  paisesBarData.map((item) => (
+                    <div key={item.name} className="flex justify-between items-center bg-zinc-950 p-3 rounded-xl border border-zinc-800 text-xs">
+                      <span className="font-semibold text-zinc-300">{item.name}</span>
+                      <span className="font-mono text-[#00a884] font-semibold">{item.value} cliques</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-zinc-500 text-xs text-center py-6">Sem dados de países</div>
+                )
+              )}
+
+              {activeGeoTab === 'estados' && (
+                estadosBarData.length > 0 ? (
+                  estadosBarData.map((item) => (
+                    <div key={item.name} className="flex justify-between items-center bg-zinc-950 p-3 rounded-xl border border-zinc-800 text-xs">
+                      <span className="font-semibold text-zinc-300">{item.name}</span>
+                      <span className="font-mono text-[#00a884] font-semibold">{item.value} cliques</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-zinc-500 text-xs text-center py-6">Sem dados de estados</div>
+                )
+              )}
+
+              {activeGeoTab === 'cidades' && (
+                cidadesBarData.length > 0 ? (
+                  cidadesBarData.map((item) => (
+                    <div key={item.name} className="flex justify-between items-center bg-zinc-950 p-3 rounded-xl border border-zinc-800 text-xs">
+                      <span className="font-semibold text-zinc-300">{item.name}</span>
+                      <span className="font-mono text-[#00a884] font-semibold">{item.value} cliques</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-zinc-500 text-xs text-center py-6">Sem dados de cidades</div>
+                )
+              )}
+            </div>
           </div>
         </div>
 
         {/* Cities and Campaign Performance table */}
-        <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Top Cities */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
-            <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Cidades com mais Captura</h4>
-            <div className="space-y-3">
-              {cidadesBarData.length > 0 ? (
-                cidadesBarData.map((cid) => (
-                  <div key={cid.name} className="flex justify-between items-center bg-zinc-950 p-3 rounded-xl border border-zinc-800 text-xs">
-                    <span className="font-semibold text-zinc-300">{cid.name}</span>
-                    <span className="font-mono text-emerald-400 font-semibold">{cid.value} leads</span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-zinc-600 text-xs">Nenhum lead geolocalizado ainda</div>
-              )}
-            </div>
-          </div>
+        <div className="lg:col-span-3 grid grid-cols-1 gap-8">
 
           {/* Performance por Criativo Table */}
-          <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-3xl p-6 flex flex-col justify-between">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 flex flex-col justify-between">
             <div>
               <h4 className="text-lg font-bold text-white mb-2">Desempenho por Criativo (Meta Ads)</h4>
               <p className="text-sm text-zinc-500 mb-6">Mapeamento de cliques, geração de leads e faturamento por criativo.</p>
