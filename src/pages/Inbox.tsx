@@ -34,7 +34,12 @@ export const Inbox: React.FC = () => {
   const [sendError, setSendError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showFileWarning, setShowFileWarning] = useState(false);
+
+  // Media upload states
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileCaption, setFileCaption] = useState('');
+  const [sendingFile, setSendingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const popularEmojis = [
     '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', 
@@ -48,6 +53,132 @@ export const Inbox: React.FC = () => {
     setTimeout(() => {
       replyInputRef.current?.focus();
     }, 10);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setFileCaption('');
+      setShowEmojiPicker(false);
+    }
+  };
+
+  const handleSendFile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeConversa || !selectedFile || sendingFile) return;
+
+    setSendingFile(true);
+    setSendError(null);
+
+    const formData = new FormData();
+    formData.append('arquivo', selectedFile);
+    if (fileCaption.trim()) {
+      formData.append('legenda', fileCaption.trim());
+    }
+
+    try {
+      // Append a temporary optimistic message
+      const tempId = Math.random().toString();
+      const isImage = selectedFile.type.startsWith('image/');
+      const optimisticMsg: MensagemOut = {
+        id: tempId,
+        direcao: 'saida',
+        tipo: isImage ? 'imagem' : 'documento',
+        conteudo: fileCaption.trim() ? `[Mídia: ${selectedFile.name}] ${fileCaption.trim()}` : `[Mídia: ${selectedFile.name}]`,
+        criado_em: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, optimisticMsg]);
+
+      await apiClient.post(`/conversas/${activeConversa.id}/midia`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      setSelectedFile(null);
+      setFileCaption('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+
+      fetchMessages(activeConversa.id, true);
+    } catch (err: any) {
+      console.error(err);
+      setSendError(err.response?.data?.detail || 'Falha ao enviar mídia.');
+      fetchMessages(activeConversa.id, true);
+    } finally {
+      setSendingFile(false);
+    }
+  };
+
+  const isMessageImage = (msg: MensagemOut) => {
+    if (!msg.conteudo) return false;
+    const typeLower = (msg.tipo || '').toLowerCase();
+    if (typeLower === 'image' || typeLower === 'imagem' || typeLower === 'img') return true;
+    
+    const url = msg.conteudo.toLowerCase();
+    return (
+      url.endsWith('.png') || 
+      url.endsWith('.jpg') || 
+      url.endsWith('.jpeg') || 
+      url.endsWith('.gif') || 
+      url.endsWith('.webp')
+    );
+  };
+
+  const renderMessageContent = (msg: MensagemOut) => {
+    if (!msg.conteudo) return null;
+    
+    if (isMessageImage(msg)) {
+      const imageUrl = msg.conteudo.startsWith('http') 
+        ? msg.conteudo 
+        : `https://api.criatividads.com.br${msg.conteudo}`;
+        
+      return (
+        <div className="space-y-1 my-1">
+          <img 
+            src={imageUrl} 
+            alt="Imagem recebida" 
+            className="rounded-lg max-w-full max-h-60 object-contain cursor-pointer hover:opacity-95 transition-opacity"
+            onClick={() => window.open(imageUrl, '_blank')}
+          />
+        </div>
+      );
+    }
+    
+    const typeLower = (msg.tipo || '').toLowerCase();
+    if (typeLower === 'document' || typeLower === 'documento' || typeLower === 'doc') {
+      const fileUrl = msg.conteudo.startsWith('http') 
+        ? msg.conteudo 
+        : `https://api.criatividads.com.br${msg.conteudo}`;
+      const fileName = msg.conteudo.split('/').pop() || 'Documento';
+      
+      return (
+        <a 
+          href={fileUrl} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="flex items-center space-x-2 bg-zinc-950 hover:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 text-[#00a884] font-semibold break-all text-xs my-1"
+        >
+          <Paperclip size={14} className="shrink-0" />
+          <span className="underline truncate max-w-[180px]">{fileName}</span>
+        </a>
+      );
+    }
+
+    if (typeLower === 'audio' || typeLower === 'ptt') {
+      const audioUrl = msg.conteudo.startsWith('http') 
+        ? msg.conteudo 
+        : `https://api.criatividads.com.br${msg.conteudo}`;
+      return (
+        <audio src={audioUrl} controls className="max-w-full h-10 mt-1" />
+      );
+    }
+
+    return (
+      <p className="leading-normal break-words whitespace-pre-wrap text-[13px] pr-2 pb-0.5">
+        {msg.conteudo}
+      </p>
+    );
   };
 
   const getAvatarInfo = (nome: string | null) => {
@@ -278,6 +409,7 @@ export const Inbox: React.FC = () => {
 
     setSending(true);
     setSendError(null);
+    setShowEmojiPicker(false);
     setShowEmojiPicker(false);
     const textToSend = replyText.trim();
 
@@ -520,7 +652,7 @@ export const Inbox: React.FC = () => {
                           ? 'bg-[#d9fdd3] text-[#111b21] rounded-tr-none' 
                           : 'bg-white text-[#111b21] rounded-tl-none border border-zinc-200/20'
                       }`}>
-                        <p className="leading-normal break-words whitespace-pre-wrap text-[13px] pr-2 pb-0.5">{msg.conteudo}</p>
+                        {renderMessageContent(msg)}
                         <div className="flex items-center justify-end space-x-1 mt-1 text-[#667781] font-mono text-[9px]">
                           <span>
                             {new Date(msg.criado_em).toLocaleTimeString('pt-BR', {
@@ -634,11 +766,19 @@ export const Inbox: React.FC = () => {
                   <button 
                     type="button" 
                     title="Anexar arquivo" 
-                    onClick={() => setShowFileWarning(true)}
+                    onClick={() => fileInputRef.current?.click()}
                     className="p-2 rounded-lg hover:bg-zinc-200 hover:text-[#111b21] transition-colors cursor-pointer text-zinc-650"
                   >
                     <Paperclip size={19} />
                   </button>
+
+                  {/* Hidden file input */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
 
                   {/* Emoji Picker Popover */}
                   {showEmojiPicker && (
@@ -836,32 +976,76 @@ export const Inbox: React.FC = () => {
           )}
         </div>
       )}
-      {/* File upload warning modal */}
-      {showFileWarning && (
+      {/* File Upload Preview Modal */}
+      {selectedFile && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-white border border-zinc-200 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
-            <div className="flex items-center space-x-2 text-amber-600">
-              <AlertTriangle size={24} />
-              <h4 className="font-bold text-zinc-800 text-sm">Upload de Arquivo (WhatsApp)</h4>
+            <div className="flex items-center space-x-2 text-[#00a884]">
+              <Paperclip size={20} />
+              <h4 className="font-bold text-zinc-800 text-sm">Enviar Mídia</h4>
             </div>
-            <p className="text-xs text-zinc-550 leading-relaxed">
-              O envio de mídias/arquivos não é suportado pelo backend atual. O endpoint de resposta do CRM aceita apenas mensagens de texto puro:
-            </p>
-            <div className="bg-zinc-950 p-2.5 rounded-xl border border-zinc-800 text-[10px] font-mono text-zinc-450 text-white-force">
-              POST /conversas/{"{"}id{"}"}/responder
-              {"\n"}{"\n"}
-              {"{"} "texto": "sua mensagem" {"}"}
+            
+            {/* File Preview */}
+            <div className="border border-zinc-200 rounded-2xl p-4 bg-zinc-50 flex flex-col items-center justify-center space-y-3">
+              {selectedFile.type.startsWith('image/') ? (
+                <img 
+                  src={URL.createObjectURL(selectedFile)} 
+                  alt="Preview" 
+                  className="max-h-40 rounded-xl object-contain shadow-sm"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-2xl bg-zinc-200 flex items-center justify-center text-zinc-500 font-bold uppercase text-xs">
+                  {selectedFile.name.split('.').pop()}
+                </div>
+              )}
+              <div className="text-center">
+                <span className="text-xs font-semibold text-zinc-700 block truncate max-w-[240px]" title={selectedFile.name}>
+                  {selectedFile.name}
+                </span>
+                <span className="text-[10px] text-zinc-400 font-mono">
+                  {(selectedFile.size / 1024).toFixed(1)} KB
+                </span>
+              </div>
             </div>
-            <p className="text-xs text-zinc-550 leading-relaxed">
-              Para ativar o envio de fotos/arquivos, o backend precisa implementar uma nova rota que processe o upload de mídias e integre com a API de Mídia do WhatsApp Cloud.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowFileWarning(false)}
-              className="w-full bg-[#00a884] hover:bg-[#008f72] text-white-force font-semibold py-2 rounded-xl text-xs transition-colors cursor-pointer"
-            >
-              Entendi
-            </button>
+
+            {/* Caption Input */}
+            <form onSubmit={handleSendFile} className="space-y-4">
+              <div className="space-y-1">
+                <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider block">Legenda (Opcional)</span>
+                <input
+                  type="text"
+                  placeholder="Adicione uma legenda..."
+                  value={fileCaption}
+                  onChange={(e) => setFileCaption(e.target.value)}
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl py-2 px-3 text-[#111b21] placeholder-zinc-400 focus:outline-none focus:border-[#00a884] text-xs"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    setFileCaption('');
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  className="flex-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-semibold py-2 rounded-xl text-xs transition-colors cursor-pointer text-center"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={sendingFile}
+                  className="flex-1 bg-[#00a884] hover:bg-[#008f72] text-white-force font-semibold py-2 rounded-xl text-xs transition-colors flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {sendingFile ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <span>Enviar</span>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
