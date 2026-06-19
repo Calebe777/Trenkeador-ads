@@ -292,17 +292,17 @@ export const Inbox: React.FC = () => {
   };
 
   return (
-    <div className="h-[80vh] flex border border-zinc-800 rounded-3xl bg-zinc-900 overflow-hidden text-zinc-100 relative">
+    <div className="h-[80vh] flex border border-zinc-200 rounded-3xl bg-[#efeae2] overflow-hidden text-zinc-800 relative shadow-xl">
       {/* Left Column: Conversations List */}
-      <div className="w-80 shrink-0 border-r border-zinc-800 flex flex-col h-full bg-zinc-900/50">
-        <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900">
+      <div className="w-80 shrink-0 border-r border-zinc-200 flex flex-col h-full bg-white">
+        <div className="p-4 border-b border-zinc-200 flex justify-between items-center bg-[#f0f2f5]">
           <div className="flex items-center space-x-2">
-            <h2 className="font-bold text-white text-base">Inbox</h2>
-            <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} title={wsConnected ? "WebSocket Conectado" : "WS Desconectado"} />
+            <h2 className="font-bold text-[#111b21] text-base">Conversas</h2>
+            <div className={`w-2.5 h-2.5 rounded-full ${wsConnected ? 'bg-[#00a884] animate-pulse' : 'bg-red-500'}`} title={wsConnected ? "WebSocket Conectado" : "WS Desconectado"} />
           </div>
           <button 
             onClick={() => fetchConversas()} 
-            className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            className="p-2 rounded-xl text-[#54656f] hover:text-[#111b21] hover:bg-zinc-200/60 transition-colors cursor-pointer"
             title="Recarregar Inbox"
           >
             <RefreshCw size={16} />
@@ -310,13 +310,13 @@ export const Inbox: React.FC = () => {
         </div>
 
         {/* Chat List Scroll View */}
-        <div className="flex-1 overflow-y-auto divide-y divide-zinc-800/40">
+        <div className="flex-1 overflow-y-auto divide-y divide-zinc-100">
           {loadingChats && conversas.length === 0 ? (
             <div className="flex justify-center items-center py-12">
-              <Loader2 size={24} className="animate-spin text-violet-500" />
+              <Loader2 size={24} className="animate-spin text-[#00a884]" />
             </div>
           ) : conversas.length === 0 ? (
-            <div className="p-8 text-center text-zinc-500 text-xs">
+            <div className="p-8 text-center text-zinc-400 text-xs">
               Nenhuma conversa em andamento.
             </div>
           ) : (
@@ -328,16 +328,16 @@ export const Inbox: React.FC = () => {
                 <div
                   key={chat.id}
                   onClick={() => setActiveConversa(chat)}
-                  className={`p-4 cursor-pointer transition-all flex flex-col justify-between hover:bg-zinc-800/40 ${
-                    active ? 'bg-violet-600/10 border-l-4 border-violet-500' : ''
+                  className={`p-4 cursor-pointer transition-all flex flex-col justify-between hover:bg-zinc-50 ${
+                    active ? 'bg-[#f0f2f5] border-l-4 border-[#00a884]' : ''
                   }`}
                 >
                   <div className="flex justify-between items-start">
-                    <span className="font-semibold text-white text-sm truncate max-w-[180px]">
+                    <span className="font-semibold text-[#111b21] text-sm truncate max-w-[180px]">
                       {chat.lead_nome || 'Lead s/ Nome'}
                     </span>
                     {chat.ultima_mensagem_em && (
-                      <span className="text-[10px] text-zinc-500 font-mono">
+                      <span className="text-[10px] text-[#667781] font-mono">
                         {new Date(chat.ultima_mensagem_em).toLocaleTimeString('pt-BR', {
                           hour: '2-digit',
                           minute: '2-digit'
@@ -346,15 +346,15 @@ export const Inbox: React.FC = () => {
                     )}
                   </div>
                   <div className="flex justify-between items-center mt-2">
-                    <span className="text-xs text-zinc-500 font-mono truncate max-w-[150px]">
+                    <span className="text-xs text-[#667781] font-mono truncate max-w-[150px]">
                       {chat.lead_telefone}
                     </span>
                     {expired ? (
-                      <span className="text-[9px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 py-0.5 px-1.5 rounded-full flex items-center">
-                        <Clock size={10} className="mr-0.5 text-amber-400" /> +24h
+                      <span className="text-[9px] font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20 py-0.5 px-1.5 rounded-full flex items-center">
+                        <Clock size={10} className="mr-0.5 text-amber-600" /> +24h
                       </span>
                     ) : (
-                      <span className="text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 py-0.5 px-1.5 rounded-full flex items-center">
+                      <span className="text-[9px] font-bold bg-[#d9fdd3] text-[#00a884] border border-[#00a884]/20 py-0.5 px-1.5 rounded-full flex items-center">
                         Janela Ativa
                       </span>
                     )}
@@ -367,20 +367,20 @@ export const Inbox: React.FC = () => {
       </div>
 
       {/* Middle Column: Chat Window history */}
-      <div className="flex-1 flex flex-col h-full bg-zinc-950/20 relative">
+      <div className="flex-1 flex flex-col h-full bg-[#efeae2] relative">
         {activeConversa ? (
           <>
             {/* Active Chat Header */}
-            <div className="p-4 border-b border-zinc-800 bg-zinc-900 flex justify-between items-center shrink-0">
+            <div className="p-4 border-b border-zinc-200 bg-[#f0f2f5] flex justify-between items-center shrink-0">
               <div>
-                <h3 className="font-bold text-white text-sm">{activeConversa.lead_nome || 'Lead Sem Nome'}</h3>
-                <p className="text-[10px] text-zinc-500 font-mono mt-0.5">{activeConversa.lead_telefone}</p>
+                <h3 className="font-bold text-[#111b21] text-sm">{activeConversa.lead_nome || 'Lead Sem Nome'}</h3>
+                <p className="text-[10px] text-[#667781] font-mono mt-0.5">{activeConversa.lead_telefone}</p>
               </div>
 
               {activeConversa.janela_24h_expira_em && (
                 <div className="text-right text-xs">
-                  <span className="text-zinc-500 block text-[10px]">Expira em:</span>
-                  <span className="font-mono text-zinc-400">
+                  <span className="text-[#667781] block text-[10px]">Expira em:</span>
+                  <span className="font-mono text-[#111b21] font-semibold">
                     {new Date(activeConversa.janela_24h_expira_em).toLocaleString('pt-BR')}
                   </span>
                 </div>
@@ -389,35 +389,33 @@ export const Inbox: React.FC = () => {
 
             {/* Error notifications banner */}
             {sendError && (
-              <div className="px-4 py-2.5 bg-red-500/10 border-b border-red-500/20 text-red-400 text-xs flex justify-between items-center shrink-0">
+              <div className="px-4 py-2.5 bg-red-100 border-b border-red-200 text-red-700 text-xs flex justify-between items-center shrink-0">
                 <div className="flex items-center space-x-1.5">
                   <AlertTriangle size={14} />
                   <span className="font-semibold">{sendError}</span>
                 </div>
-                <button onClick={() => setSendError(null)} className="text-red-400 hover:text-white font-bold">X</button>
+                <button onClick={() => setSendError(null)} className="text-red-700 hover:text-red-950 font-bold">X</button>
               </div>
             )}
 
             {/* Message Bubbles History */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {loadingMessages && messages.length === 0 ? (
                 <div className="flex items-center justify-center py-20">
-                  <Loader2 size={24} className="animate-spin text-violet-500" />
+                  <Loader2 size={24} className="animate-spin text-[#00a884]" />
                 </div>
               ) : (
                 messages.map((msg) => {
                   const outgoing = msg.direcao === 'saida';
                   return (
                     <div key={msg.id} className={`flex ${outgoing ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[70%] rounded-2xl p-3.5 text-sm shadow-md ${
+                      <div className={`max-w-[70%] rounded-xl px-3 py-2 text-sm shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] ${
                         outgoing 
-                          ? 'bg-violet-600 text-white rounded-tr-none' 
-                          : 'bg-zinc-800 text-zinc-100 rounded-tl-none border border-zinc-700/50'
+                          ? 'bg-[#d9fdd3] text-[#111b21] rounded-tr-none' 
+                          : 'bg-white text-[#111b21] rounded-tl-none border border-zinc-200/30'
                       }`}>
-                        <p className="leading-normal break-words whitespace-pre-wrap">{msg.conteudo}</p>
-                        <div className={`text-[10px] text-right mt-1.5 ${
-                          outgoing ? 'text-violet-200' : 'text-zinc-500'
-                        }`}>
+                        <p className="leading-normal break-words whitespace-pre-wrap text-[13.5px]">{msg.conteudo}</p>
+                        <div className="text-[9px] text-right mt-1 text-[#667781] font-mono">
                           {new Date(msg.criado_em).toLocaleTimeString('pt-BR', {
                             hour: '2-digit',
                             minute: '2-digit'
@@ -433,8 +431,8 @@ export const Inbox: React.FC = () => {
 
             {/* Quick replies popover */}
             {showQuickPopover && (
-              <div className="absolute bottom-20 left-4 right-4 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-2 z-10 space-y-1">
-                <div className="text-[10px] text-zinc-500 px-3 py-1 font-semibold uppercase tracking-wider flex items-center justify-between">
+              <div className="absolute bottom-20 left-4 right-4 bg-white border border-zinc-200 rounded-2xl shadow-2xl p-2 z-10 space-y-1">
+                <div className="text-[10px] text-zinc-400 px-3 py-1 font-semibold uppercase tracking-wider flex items-center justify-between">
                   <span>Respostas Rápidas</span>
                   <span className="flex items-center"><CornerDownLeft size={10} className="mr-0.5" /> Enter para inserir</span>
                 </div>
@@ -442,8 +440,8 @@ export const Inbox: React.FC = () => {
                   <button
                     key={qr.id}
                     onClick={() => selectQuickReply(qr)}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs flex justify-between items-center transition-colors ${
-                      index === quickIndex ? 'bg-violet-600 text-white font-medium' : 'hover:bg-zinc-800 text-zinc-300'
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs flex justify-between items-center transition-colors cursor-pointer ${
+                      index === quickIndex ? 'bg-[#00a884] text-white font-medium' : 'hover:bg-zinc-100 text-zinc-700'
                     }`}
                   >
                     <span className="font-mono font-semibold">/{qr.atalho}</span>
@@ -456,8 +454,8 @@ export const Inbox: React.FC = () => {
             {/* Composer Box (Input or Template depending on 24h validation) */}
             {is24hWindowExpired(activeConversa.janela_24h_expira_em) ? (
               /* Template send form when 24h window has expired */
-              <div className="p-4 border-t border-zinc-800 bg-zinc-900/90 shrink-0 space-y-3">
-                <div className="flex items-center space-x-2 text-amber-400 text-xs font-semibold">
+              <div className="p-4 border-t border-zinc-200 bg-[#f0f2f5] shrink-0 space-y-3">
+                <div className="flex items-center space-x-2 text-amber-600 text-xs font-semibold">
                   <AlertTriangle size={16} />
                   <span>Janela de 24h Expirada. Envie um template para reiniciar.</span>
                 </div>
@@ -470,7 +468,7 @@ export const Inbox: React.FC = () => {
                       placeholder="Nome do template cadastrado (ex: welcome_msg)..."
                       value={templateName}
                       onChange={(e) => setTemplateName(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2.5 px-4 text-white focus:outline-none focus:border-violet-600 text-xs"
+                      className="w-full bg-white border border-zinc-200 rounded-xl py-2.5 px-4 text-[#111b21] placeholder-zinc-400 focus:outline-none focus:border-[#00a884] text-xs"
                     />
                   </div>
                   <div className="w-full sm:w-32">
@@ -480,7 +478,7 @@ export const Inbox: React.FC = () => {
                       placeholder="Idioma (pt_BR)"
                       value={templateLang}
                       onChange={(e) => setTemplateLang(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2.5 px-4 text-white focus:outline-none focus:border-violet-600 text-xs font-mono text-center"
+                      className="w-full bg-white border border-zinc-200 rounded-xl py-2.5 px-4 text-[#111b21] placeholder-zinc-400 focus:outline-none focus:border-[#00a884] text-xs font-mono text-center"
                     />
                   </div>
                   <button
@@ -501,20 +499,20 @@ export const Inbox: React.FC = () => {
               </div>
             ) : (
               /* Standard chat response input */
-              <form onSubmit={handleSendMessage} className="p-4 border-t border-zinc-800 bg-zinc-900 flex space-x-3 shrink-0">
+              <form onSubmit={handleSendMessage} className="p-3 border-t border-zinc-200 bg-[#f0f2f5] flex space-x-3 shrink-0 items-center">
                 <input
                   type="text"
                   ref={replyInputRef}
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Responder no WhatsApp (use / para atalhos)..."
-                  className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-white placeholder-zinc-600 focus:outline-none focus:border-violet-600 text-sm"
+                  placeholder="Digitar mensagem"
+                  className="flex-1 bg-white border border-zinc-200 rounded-xl py-2.5 px-4 text-[#111b21] placeholder-zinc-400 focus:outline-none focus:border-zinc-300 text-sm"
                 />
                 <button
                   type="submit"
                   disabled={!replyText.trim() || sending}
-                  className="bg-violet-600 hover:bg-violet-700 text-white py-3 px-4 rounded-xl flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
+                  className="bg-[#00a884] hover:bg-[#008f72] text-white p-2.5 rounded-xl flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                 </button>
@@ -522,8 +520,8 @@ export const Inbox: React.FC = () => {
             )}
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-zinc-500 space-y-2">
-            <User size={36} className="text-zinc-700" />
+          <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 space-y-2 bg-[#efeae2]">
+            <User size={36} className="text-zinc-300" />
             <p className="text-sm">Selecione uma conversa para iniciar o atendimento.</p>
           </div>
         )}
@@ -531,67 +529,67 @@ export const Inbox: React.FC = () => {
 
       {/* Right Column: Lead Details & Rich Origin */}
       {activeConversa && (
-        <div className="w-72 shrink-0 border-l border-zinc-800 bg-zinc-900/50 flex flex-col h-full overflow-y-auto p-4 space-y-6">
-          <div className="border-b border-zinc-800 pb-3 flex items-center space-x-2">
-            <Info size={16} className="text-violet-400" />
-            <h4 className="font-bold text-white text-sm">Origem do Atendimento</h4>
+        <div className="w-72 shrink-0 border-l border-zinc-200 bg-[#f8f9fa] flex flex-col h-full overflow-y-auto p-4 space-y-6">
+          <div className="border-b border-zinc-200 pb-3 flex items-center space-x-2">
+            <Info size={16} className="text-[#00a884]" />
+            <h4 className="font-bold text-[#111b21] text-sm">Origem do Atendimento</h4>
           </div>
 
           {leadDetail ? (
-            <div className="space-y-5 text-xs">
+            <div className="space-y-5 text-xs text-[#111b21]">
               <div>
-                <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider block">Nome do Lead</span>
-                <span className="text-white font-medium text-sm block mt-0.5">{leadDetail.lead.nome || 'Não fornecido'}</span>
+                <span className="text-[10px] text-[#667781] font-semibold uppercase tracking-wider block">Nome do Lead</span>
+                <span className="text-[#111b21] font-bold text-sm block mt-0.5">{leadDetail.lead.nome || 'Não fornecido'}</span>
               </div>
 
               <div>
-                <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider block">Localidade (IP)</span>
+                <span className="text-[10px] text-[#667781] font-semibold uppercase tracking-wider block">Localidade (IP)</span>
                 {leadDetail.lead.cidade || leadDetail.lead.estado ? (
-                  <div className="flex items-center space-x-1 mt-1 text-zinc-300">
-                    <MapPin size={12} className="text-zinc-500" />
+                  <div className="flex items-center space-x-1 mt-1 text-[#111b21]">
+                    <MapPin size={12} className="text-[#667781]" />
                     <span>{[leadDetail.lead.cidade, leadDetail.lead.estado].filter(Boolean).join(' - ')}</span>
                   </div>
                 ) : (
-                  <span className="text-zinc-600 block mt-0.5">Cidade não detectada</span>
+                  <span className="text-zinc-400 block mt-0.5">Cidade não detectada</span>
                 )}
               </div>
 
               {leadDetail.origem ? (
-                <div className="space-y-4 pt-3 border-t border-zinc-800/60">
-                  <div className="flex items-center space-x-1 text-zinc-400 font-semibold uppercase text-[10px]">
-                    <Layers size={12} className="text-emerald-400" />
+                <div className="space-y-4 pt-3 border-t border-zinc-200">
+                  <div className="flex items-center space-x-1 text-[#667781] font-semibold uppercase text-[10px]">
+                    <Layers size={12} className="text-[#00a884]" />
                     <span>Audiência Ads</span>
                   </div>
 
-                  <div className="space-y-2 bg-zinc-950/60 p-3 rounded-xl border border-zinc-800">
+                  <div className="space-y-2 bg-white p-3 rounded-xl border border-zinc-200">
                     <div>
-                      <span className="text-[9px] text-zinc-500 block">Origem (Source)</span>
-                      <span className="text-zinc-300 font-medium">{leadDetail.origem.utm_source || 'Direto'}</span>
+                      <span className="text-[9px] text-[#667781] block font-semibold">Origem (Source)</span>
+                      <span className="text-[#111b21] font-medium">{leadDetail.origem.utm_source || 'Direto'}</span>
                     </div>
                     <div>
-                      <span className="text-[9px] text-zinc-500 block">Campanha</span>
-                      <span className="text-zinc-300 font-medium">{leadDetail.origem.utm_campaign || '-'}</span>
+                      <span className="text-[9px] text-[#667781] block font-semibold">Campanha</span>
+                      <span className="text-[#111b21] font-medium">{leadDetail.origem.utm_campaign || '-'}</span>
                     </div>
                     <div>
-                      <span className="text-[9px] text-zinc-500 block">Criativo (Content)</span>
-                      <span className="text-zinc-300 font-medium truncate block max-w-[200px]">{leadDetail.origem.utm_content || '-'}</span>
+                      <span className="text-[9px] text-[#667781] block font-semibold">Criativo (Content)</span>
+                      <span className="text-[#111b21] font-medium truncate block max-w-[200px]">{leadDetail.origem.utm_content || '-'}</span>
                     </div>
                   </div>
 
-                  {/* Device metadata icons and labels */}
-                  <div className="border-t border-zinc-800/60 pt-3 space-y-2">
-                    <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider block">Dispositivo</span>
-                    <div className="flex items-center justify-between text-zinc-300 font-mono text-[10px]">
-                      <span>Tipo:</span>
-                      <span className="text-white capitalize">{leadDetail.origem.device_tipo || 'Desconhecido'}</span>
+                  {/* Device metadata */}
+                  <div className="border-t border-zinc-200 pt-3 space-y-2">
+                    <span className="text-[10px] text-[#667781] font-semibold uppercase tracking-wider block">Dispositivo</span>
+                    <div className="flex items-center justify-between text-[#111b21] font-mono text-[10px]">
+                      <span className="text-[#667781]">Tipo:</span>
+                      <span className="text-[#111b21] font-semibold capitalize">{leadDetail.origem.device_tipo || 'Desconhecido'}</span>
                     </div>
-                    <div className="flex items-center justify-between text-zinc-300 font-mono text-[10px]">
-                      <span>Sistema:</span>
-                      <span className="text-white">{leadDetail.origem.os || '-'}</span>
+                    <div className="flex items-center justify-between text-[#111b21] font-mono text-[10px]">
+                      <span className="text-[#667781]">Sistema:</span>
+                      <span className="text-[#111b21] font-semibold">{leadDetail.origem.os || '-'}</span>
                     </div>
-                    <div className="flex items-center justify-between text-zinc-300 font-mono text-[10px]">
-                      <span>Navegador:</span>
-                      <span className="text-white truncate max-w-[120px]" title={leadDetail.origem.navegador || ''}>
+                    <div className="flex items-center justify-between text-[#111b21] font-mono text-[10px]">
+                      <span className="text-[#667781]">Navegador:</span>
+                      <span className="text-[#111b21] font-semibold truncate max-w-[120px]" title={leadDetail.origem.navegador || ''}>
                         {leadDetail.origem.navegador || '-'}
                       </span>
                     </div>
@@ -599,23 +597,23 @@ export const Inbox: React.FC = () => {
 
                   {leadDetail.origem.fbclid && (
                     <div>
-                      <span className="text-[9px] text-zinc-500 block">Meta fbclid</span>
-                      <span className="text-[10px] font-mono text-zinc-400 break-all bg-zinc-950 p-1.5 rounded border border-zinc-900 block select-all">
+                      <span className="text-[9px] text-[#667781] block font-semibold">Meta fbclid</span>
+                      <span className="text-[10px] font-mono text-zinc-500 break-all bg-white p-1.5 rounded border border-zinc-200 block select-all">
                         {leadDetail.origem.fbclid}
                       </span>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-center text-zinc-600 text-[10px] flex flex-col items-center space-y-1">
-                  <Globe size={14} />
+                <div className="p-3 bg-white border border-zinc-200 rounded-xl text-center text-zinc-400 text-[10px] flex flex-col items-center space-y-1">
+                  <Globe size={14} className="text-zinc-300" />
                   <span>Sem dados de UTM. Capturado sem link de redirecionamento.</span>
                 </div>
               )}
             </div>
           ) : (
             <div className="flex justify-center items-center py-6">
-              <Loader2 size={16} className="animate-spin text-zinc-500" />
+              <Loader2 size={16} className="animate-spin text-zinc-400" />
             </div>
           )}
         </div>
