@@ -35,11 +35,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       {/* Brand Header */}
       <div className="p-6 border-b border-zinc-800 flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center font-bold text-white shadow-lg shadow-violet-500/20">
-            LT
+          <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center font-bold text-white shadow-lg shadow-violet-500/20 text-white-force">
+            MT
           </div>
           <span className="font-bold text-xl tracking-tight text-[#00a884]">
-            LeadTrack
+            ManuTracker
           </span>
         </div>
         {onClose && (

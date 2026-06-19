@@ -36,10 +36,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Top Header for Mobile */}
         <header className="flex md:hidden items-center justify-between px-6 py-4 bg-zinc-900 border-b border-zinc-800">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center font-bold text-white shadow-lg shadow-violet-500/20">
-              LT
+            <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center font-bold text-white shadow-lg shadow-violet-500/20 text-white-force">
+              MT
             </div>
-            <span className="font-bold text-lg text-white">LeadTrack</span>
+            <span className="font-bold text-lg text-white text-white-force">ManuTracker</span>
           </div>
           <button 
             onClick={() => setIsSidebarOpen(true)}

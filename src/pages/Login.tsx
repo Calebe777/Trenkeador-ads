@@ -39,10 +39,10 @@ export const Login: React.FC = () => {
 
       <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl backdrop-blur-md">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-violet-600 flex items-center justify-center font-bold text-white text-xl shadow-lg shadow-violet-500/25 mb-4">
-            LT
+          <div className="w-12 h-12 rounded-2xl bg-violet-600 flex items-center justify-center font-bold text-white text-xl shadow-lg shadow-violet-500/25 mb-4 text-white-force">
+            MT
           </div>
-          <h2 className="text-2xl font-bold text-white mb-1">Entrar no LeadTrack</h2>
+          <h2 className="text-2xl font-bold text-white mb-1">Entrar no ManuTracker</h2>
           <p className="text-zinc-500 text-sm">Insira seu e-mail e senha para acessar o painel</p>
         </div>
 
