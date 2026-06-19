@@ -60,17 +60,27 @@
 
   /* Override text-white to be near-black by default, except inside active items/buttons/badges */
   .text-white {
-    color: #111b21;
+    color: #111b21 !important;
   }
   
+  h1.text-white, h2.text-white, h3.text-white, h4.text-white, span.text-white, p.text-white, div.text-white {
+    color: #111b21 !important;
+  }
+  
+  /* Exclude these elements from the dark text override so they keep clean white text */
   aside .text-white,
   nav .text-white,
   button .text-white,
   button.text-white,
+  button span.text-white,
   .bg-violet-600 .text-white,
   .bg-emerald-600 .text-white,
   .bg-amber-600 .text-white,
   .bg-red-600 .text-white,
+  .bg-violet-600 span.text-white,
+  .bg-emerald-600 span.text-white,
+  .bg-amber-600 span.text-white,
+  .bg-red-600 span.text-white,
   .rounded-full .text-white,
   .text-white-force {
     color: #ffffff !important;
