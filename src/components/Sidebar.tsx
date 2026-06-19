@@ -38,7 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center font-bold text-white shadow-lg shadow-violet-500/20">
             LT
           </div>
-          <span className="font-bold text-xl tracking-tight text-white bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
+          <span className="font-bold text-xl tracking-tight text-[#00a884]">
             LeadTrack
           </span>
         </div>
@@ -88,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
               {user.nome.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{user.nome}</p>
+              <p className="text-sm font-semibold text-zinc-100 truncate">{user.nome}</p>
               <p className="text-xs text-zinc-500 truncate">{user.email}</p>
             </div>
           </div>

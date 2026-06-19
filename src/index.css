@@ -1,11 +1,37 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-primary: var(--color-violet-600);
-  --color-brand-primary-hover: var(--color-violet-700);
-  --color-brand-accent: var(--color-emerald-500);
-  --color-brand-dark: var(--color-zinc-900);
-  --color-brand-light: var(--color-zinc-100);
+  /* Override Zinc (dark/grey scale) to a light theme WhatsApp palette */
+  --color-zinc-950: #f0f2f5; /* App background - WhatsApp light gray */
+  --color-zinc-900: #ffffff; /* Sidebar and card backgrounds - White */
+  --color-zinc-800: #e9edef; /* Borders - WhatsApp Web border light gray */
+  --color-zinc-700: #d1d7db; /* Card borders/separators */
+  --color-zinc-600: #8696a0; /* Secondary icons/subtext */
+  --color-zinc-500: #667781; /* Placeholders/timestamps */
+  --color-zinc-400: #54656f; /* Inactive labels */
+  --color-zinc-300: #222222; /* Normal body text */
+  --color-zinc-200: #111b21; /* Strong text */
+  --color-zinc-100: #111b21; /* Headers/main text - WhatsApp Web near-black */
+
+  /* Override Violet (brand accent) to WhatsApp Green palette */
+  --color-violet-50: #e8f5e9;
+  --color-violet-100: #c8e6c9;
+  --color-violet-200: #a5d6a7;
+  --color-violet-300: #81c784;
+  --color-violet-400: #00e676;
+  --color-violet-500: #00a884; /* Modern WhatsApp Green */
+  --color-violet-600: #00a884; /* Active buttons, accent background */
+  --color-violet-700: #008f72; /* Button hover state */
+  --color-violet-800: #005c4b; /* Dark WhatsApp Green */
+  --color-violet-900: #004d3e;
+  --color-violet-950: #004237;
+
+  /* Brand system overrides */
+  --color-brand-primary: #00a884;
+  --color-brand-primary-hover: #008f72;
+  --color-brand-accent: #00a884;
+  --color-brand-dark: #f0f2f5;
+  --color-brand-light: #111b21;
   
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
@@ -16,7 +42,41 @@
     font-family: var(--font-sans);
   }
   
-  /* Custom scrollbar for premium look */
+  /* Ensure form inputs, selects and textareas are readable in light mode */
+  input, select, textarea {
+    color: #111b21 !important;
+    background-color: #f0f2f5 !important;
+    border-color: #e9edef !important;
+  }
+  
+  input:focus, select:focus, textarea:focus {
+    border-color: #00a884 !important;
+    outline: none !important;
+  }
+  
+  input::placeholder, textarea::placeholder {
+    color: #8696a0 !important;
+  }
+
+  /* Override text-white to be near-black by default, except inside active items/buttons/badges */
+  .text-white {
+    color: #111b21;
+  }
+  
+  aside .text-white,
+  nav .text-white,
+  button .text-white,
+  button.text-white,
+  .bg-violet-600 .text-white,
+  .bg-emerald-600 .text-white,
+  .bg-amber-600 .text-white,
+  .bg-red-600 .text-white,
+  .rounded-full .text-white,
+  .text-white-force {
+    color: #ffffff !important;
+  }
+
+  /* Custom scrollbar for light theme look */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -25,6 +85,6 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-zinc-800 rounded-full hover:bg-zinc-700;
+    @apply bg-zinc-700 rounded-full hover:bg-zinc-600;
   }
 }
