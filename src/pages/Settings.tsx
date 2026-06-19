@@ -16,7 +16,8 @@ import {
   Zap,
   Globe,
   Lock,
-  Trash2
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 
 export const Settings: React.FC = () => {
@@ -48,6 +49,16 @@ export const Settings: React.FC = () => {
   const [canalWabaId, setCanalWabaId] = useState('');
   const [canalDisplayNumber, setCanalDisplayNumber] = useState('');
   const [canalVerifyToken, setCanalVerifyToken] = useState('leadtrack_verify_token_default');
+  const [canalTipo, setCanalTipo] = useState<'oficial' | 'nao_oficial'>('oficial');
+
+  // QR Code Connection Modal State
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrCanalId, setQrCanalId] = useState<string | null>(null);
+  const [qrCanalNome, setQrCanalNome] = useState('');
+  const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const [qrStatus, setQrStatus] = useState<string>('desconectado');
 
   // Channel token renewal modal state
   const [renewingCanal, setRenewingCanal] = useState<CanalOut | null>(null);
@@ -128,31 +139,115 @@ export const Settings: React.FC = () => {
     }
   };
 
+  const openQrModal = (canalId: string, canalNome: string) => {
+    setQrCanalId(canalId);
+    setQrCanalNome(canalNome);
+    setQrModalOpen(true);
+    setQrCodeBase64(null);
+    setQrLoading(true);
+    setQrError(null);
+    setQrStatus('desconectado');
+    loadQrCode(canalId);
+  };
+
+  const loadQrCode = async (canalId: string) => {
+    try {
+      setQrLoading(true);
+      setQrError(null);
+      const res = await apiClient.get<{ qr: string }>(`/whatsapp/canais/${canalId}/qr`);
+      if (res.data && res.data.qr) {
+        setQrCodeBase64(res.data.qr);
+      } else {
+        setQrError('Nenhum QR Code retornado pela API.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setQrError(err.response?.data?.detail || 'Erro ao obter QR Code.');
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let intervalId: any = null;
+
+    if (qrModalOpen && qrCanalId && qrStatus !== 'conectado') {
+      intervalId = setInterval(async () => {
+        try {
+          const res = await apiClient.get<{ status: string }>(`/whatsapp/canais/${qrCanalId}/status`);
+          const currentStatus = res.data?.status || 'desconectado';
+          
+          if (currentStatus === 'conectado') {
+            setQrStatus('conectado');
+            clearInterval(intervalId);
+            
+            // Reload channels
+            const canaisRes = await apiClient.get<CanalOut[]>('/whatsapp/canais');
+            setCanais(canaisRes.data);
+            
+            // Close modal after 2 seconds
+            setTimeout(() => {
+              setQrModalOpen(false);
+              setQrCanalId(null);
+              setQrCodeBase64(null);
+            }, 2000);
+          } else {
+            setQrStatus(currentStatus);
+          }
+        } catch (err) {
+          console.error('Error polling status:', err);
+        }
+      }, 3000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [qrModalOpen, qrCanalId, qrStatus]);
+
   const handleCreateCanal = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmittingCanal(true);
     setCanalError(null);
 
-    const payload: CanalIn = {
-      nome: canalNome.trim(),
-      phone_number_id: canalPhoneId.trim(),
-      access_token: canalAccessToken.trim(),
-      waba_id: canalWabaId.trim() || null,
-      numero_exibicao: canalDisplayNumber.trim() || null,
-      verify_token: canalVerifyToken.trim() || null
-    };
+    let payload: CanalIn;
+    if (canalTipo === 'nao_oficial') {
+      payload = {
+        nome: canalNome.trim(),
+        tipo: 'nao_oficial'
+      };
+    } else {
+      payload = {
+        nome: canalNome.trim(),
+        phone_number_id: canalPhoneId.trim(),
+        access_token: canalAccessToken.trim(),
+        waba_id: canalWabaId.trim() || null,
+        numero_exibicao: canalDisplayNumber.trim() || null,
+        verify_token: canalVerifyToken.trim() || null,
+        tipo: 'oficial'
+      };
+    }
 
     try {
-      await apiClient.post('/whatsapp/canais', payload);
+      const res = await apiClient.post<CanalOut>('/whatsapp/canais', payload);
+      const created = res.data;
+
       setCanalNome('');
       setCanalPhoneId('');
       setCanalAccessToken('');
       setCanalWabaId('');
       setCanalDisplayNumber('');
       setCanalVerifyToken('leadtrack_verify_token_default');
+      setCanalTipo('oficial');
       
       const canaisRes = await apiClient.get<CanalOut[]>('/whatsapp/canais');
       setCanais(canaisRes.data);
+
+      if (canalTipo === 'nao_oficial' && created && created.id) {
+        openQrModal(created.id, created.nome);
+      }
     } catch (err: any) {
       console.error(err);
       setCanalError(err.response?.data?.detail || 'Erro ao registrar canal de WhatsApp.');
@@ -418,89 +513,125 @@ export const Settings: React.FC = () => {
             )}
 
             <form onSubmit={handleCreateCanal} className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">
-                    Nome do Canal *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="WhatsApp Vendas"
-                    value={canalNome}
-                    onChange={(e) => setCanalNome(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-violet-600 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">
-                    Phone Number ID *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="ID do número na Meta"
-                    value={canalPhoneId}
-                    onChange={(e) => setCanalPhoneId(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-violet-600 text-xs font-mono"
-                  />
-                </div>
-              </div>
-
+              {/* Type selector */}
               <div>
                 <label className="block text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">
-                  System Access Token (Meta App Token) *
+                  Tipo de Canal *
                 </label>
-                <textarea
-                  required
-                  placeholder="Cole o token de acesso de usuário do sistema da Meta Developer..."
-                  value={canalAccessToken}
-                  onChange={(e) => setCanalAccessToken(e.target.value)}
-                  rows={2}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-violet-600 text-xs font-mono resize-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">
-                    WABA ID (WhatsApp Business Account ID)
+                <div className="flex space-x-6 bg-zinc-950 p-3 rounded-xl border border-zinc-800">
+                  <label className="flex items-center space-x-2 text-white cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="canalTipo"
+                      value="oficial"
+                      checked={canalTipo === 'oficial'}
+                      onChange={() => setCanalTipo('oficial')}
+                      className="accent-violet-600 h-4 w-4 cursor-pointer"
+                    />
+                    <span className="text-xs font-semibold">Oficial (API Cloud)</span>
                   </label>
-                  <input
-                    type="text"
-                    placeholder="ex: 9028394829"
-                    value={canalWabaId}
-                    onChange={(e) => setCanalWabaId(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-violet-600 text-xs font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">
-                    Número de Exibição
+                  <label className="flex items-center space-x-2 text-white cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="canalTipo"
+                      value="nao_oficial"
+                      checked={canalTipo === 'nao_oficial'}
+                      onChange={() => setCanalTipo('nao_oficial')}
+                      className="accent-violet-600 h-4 w-4 cursor-pointer"
+                    />
+                    <span className="text-xs font-semibold">Não-oficial (QR Code)</span>
                   </label>
-                  <input
-                    type="text"
-                    placeholder="ex: +5511999999999"
-                    value={canalDisplayNumber}
-                    onChange={(e) => setCanalDisplayNumber(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-violet-600 text-xs font-mono"
-                  />
                 </div>
               </div>
 
+              {/* Name */}
               <div>
                 <label className="block text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">
-                  Verify Token (Meta Webhook Handshake)
+                  Nome do Canal *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Livre escolha para verificação da Meta"
-                  value={canalVerifyToken}
-                  onChange={(e) => setCanalVerifyToken(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-violet-600 text-xs font-mono"
+                  placeholder={canalTipo === 'nao_oficial' ? "Ex: WhatsApp Vendas (QR Code)" : "Ex: WhatsApp Oficial"}
+                  value={canalNome}
+                  onChange={(e) => setCanalNome(e.target.value)}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-violet-600 text-xs"
                 />
               </div>
+
+              {canalTipo === 'oficial' && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                        Phone Number ID *
+                      </label>
+                      <input
+                        type="text"
+                        required={canalTipo === 'oficial'}
+                        placeholder="ID do número na Meta"
+                        value={canalPhoneId}
+                        onChange={(e) => setCanalPhoneId(e.target.value)}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-violet-600 text-xs font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                        WABA ID (WhatsApp Business Account ID)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="ex: 9028394829"
+                        value={canalWabaId}
+                        onChange={(e) => setCanalWabaId(e.target.value)}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-violet-600 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                      System Access Token (Meta App Token) *
+                    </label>
+                    <textarea
+                      required={canalTipo === 'oficial'}
+                      placeholder="Cole o token de acesso de usuário do sistema da Meta Developer..."
+                      value={canalAccessToken}
+                      onChange={(e) => setCanalAccessToken(e.target.value)}
+                      rows={2}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-violet-600 text-xs font-mono resize-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                        Número de Exibição
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="ex: +5511999999999"
+                        value={canalDisplayNumber}
+                        onChange={(e) => setCanalDisplayNumber(e.target.value)}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-violet-600 text-xs font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                        Verify Token (Meta Webhook Handshake)
+                      </label>
+                      <input
+                        type="text"
+                        required={canalTipo === 'oficial'}
+                        placeholder="Livre escolha para verificação da Meta"
+                        value={canalVerifyToken}
+                        onChange={(e) => setCanalVerifyToken(e.target.value)}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-violet-600 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="flex justify-end pt-4 border-t border-zinc-800">
                 <button
@@ -509,7 +640,7 @@ export const Settings: React.FC = () => {
                   className="bg-violet-600 hover:bg-violet-700 text-white font-semibold py-2.5 px-5 rounded-xl text-xs transition-colors flex items-center space-x-1.5 cursor-pointer"
                 >
                   {submittingCanal ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                  <span>Conectar Canal</span>
+                  <span>{canalTipo === 'nao_oficial' ? 'Criar e Conectar Canal' : 'Conectar Canal'}</span>
                 </button>
               </div>
             </form>
@@ -723,45 +854,63 @@ export const Settings: React.FC = () => {
               <p className="text-xs text-zinc-500">Nenhum canal ativo encontrado.</p>
             ) : (
               <div className="space-y-3">
-                {canais.map((canal) => (
-                  <div key={canal.id} className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-3 relative group">
-                    <div className="flex justify-between items-center pr-6">
-                      <span className="font-bold text-white text-sm">{canal.nome}</span>
-                      <span className={`text-[9px] font-semibold py-0.5 px-2 rounded-full border ${
-                        canal.ativo ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' : 'bg-red-500/10 text-red-400 border-red-500/25'
-                      }`}>
-                        {canal.ativo ? 'Conectado' : 'Offline'}
-                      </span>
-                    </div>
-                    
-                    <div className="text-[10px] space-y-1 text-zinc-500 font-mono leading-tight">
-                      <div><span className="text-zinc-600">ID:</span> {canal.phone_number_id}</div>
-                      {canal.numero_exibicao && (
-                        <div><span className="text-zinc-600">Tel:</span> {canal.numero_exibicao}</div>
-                      )}
-                    </div>
+                {canais.map((canal) => {
+                  const isNaoOficial = canal.tipo === 'nao_oficial' || canal.phone_number_id?.startsWith('qr-') || !canal.phone_number_id;
+                  return (
+                    <div key={canal.id} className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-3 relative group">
+                      <div className="flex justify-between items-center pr-6">
+                        <div>
+                          <span className="font-bold text-white text-sm block">{canal.nome}</span>
+                          <span className="text-[9px] bg-zinc-900 border border-zinc-800 text-zinc-400 py-0.5 px-1.5 rounded-md mt-1 inline-block">
+                            {isNaoOficial ? 'Não-oficial (QR Code)' : 'Oficial (API Cloud)'}
+                          </span>
+                        </div>
+                        <span className={`text-[9px] font-semibold py-0.5 px-2 rounded-full border ${
+                          canal.ativo ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' : 'bg-red-500/10 text-red-400 border-red-500/25'
+                        }`}>
+                          {canal.ativo ? 'Conectado' : 'Desconectado'}
+                        </span>
+                      </div>
+                      
+                      <div className="text-[10px] space-y-1 text-zinc-500 font-mono leading-tight">
+                        {!isNaoOficial && <div><span className="text-zinc-600">ID:</span> {canal.phone_number_id}</div>}
+                        {canal.numero_exibicao && (
+                          <div><span className="text-zinc-600">Tel:</span> {canal.numero_exibicao}</div>
+                        )}
+                      </div>
 
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          setRenewingCanal(canal);
-                          setRenewToken('');
-                        }}
-                        className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold py-2 px-3 rounded-xl border border-zinc-800 hover:border-zinc-700 text-xs transition-colors cursor-pointer flex justify-center items-center space-x-1.5"
-                      >
-                        <Key size={12} />
-                        <span>Renovar Token Meta</span>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteCanal(canal.id, canal.nome)}
-                        title="Apagar Canal"
-                        className="bg-red-500/10 hover:bg-red-600 text-red-500 hover:text-white p-2 rounded-xl border border-red-500/20 hover:border-red-600 transition-colors cursor-pointer flex items-center justify-center"
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                      <div className="flex gap-2">
+                        {isNaoOficial ? (
+                          <button
+                            onClick={() => openQrModal(canal.id, canal.nome)}
+                            className="flex-1 bg-[#00a884]/10 hover:bg-[#00a884] text-[#00a884] hover:text-white font-semibold py-2 px-3 rounded-xl border border-[#00a884]/20 text-xs transition-colors cursor-pointer flex justify-center items-center space-x-1.5"
+                          >
+                            <MessageSquare size={12} />
+                            <span>{canal.ativo ? 'Reconectar via QR' : 'Conectar via QR'}</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setRenewingCanal(canal);
+                              setRenewToken('');
+                            }}
+                            className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold py-2 px-3 rounded-xl border border-zinc-800 hover:border-zinc-700 text-xs transition-colors cursor-pointer flex justify-center items-center space-x-1.5"
+                          >
+                            <Key size={12} />
+                            <span>Renovar Token Meta</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeleteCanal(canal.id, canal.nome)}
+                          title="Apagar Canal"
+                          className="bg-red-500/10 hover:bg-red-600 text-red-500 hover:text-white p-2 rounded-xl border border-red-500/20 hover:border-red-600 transition-colors cursor-pointer flex items-center justify-center"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -873,6 +1022,82 @@ export const Settings: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Connection Modal */}
+      {qrModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => {
+            setQrModalOpen(false);
+            setQrCanalId(null);
+            setQrCodeBase64(null);
+          }} />
+          <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl p-6 text-center space-y-6">
+            <button
+              onClick={() => {
+                setQrModalOpen(false);
+                setQrCanalId(null);
+                setQrCodeBase64(null);
+              }}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-white cursor-pointer text-sm"
+            >
+              ✕
+            </button>
+            
+            <div>
+              <h3 className="text-xl font-bold text-white mb-1">Conectar via QR Code</h3>
+              <p className="text-xs text-zinc-500">Canal: <span className="text-violet-400 font-semibold">{qrCanalNome}</span></p>
+            </div>
+
+            <div className="flex flex-col items-center justify-center bg-zinc-950 rounded-2xl p-6 border border-zinc-800 relative min-h-[250px]">
+              {qrLoading ? (
+                <div className="flex flex-col items-center space-y-2">
+                  <Loader2 size={36} className="animate-spin text-violet-500" />
+                  <span className="text-xs text-zinc-400 font-medium">Gerando QR Code...</span>
+                </div>
+              ) : qrError ? (
+                <div className="flex flex-col items-center space-y-3 p-4">
+                  <AlertTriangle size={32} className="text-red-500" />
+                  <span className="text-xs text-red-400 font-semibold">{qrError}</span>
+                  <button 
+                    onClick={() => qrCanalId && loadQrCode(qrCanalId)}
+                    className="bg-violet-600 hover:bg-violet-700 text-white font-semibold py-1.5 px-4 rounded-xl text-xs transition-colors cursor-pointer"
+                  >
+                    Tentar Novamente
+                  </button>
+                </div>
+              ) : qrStatus === 'conectado' ? (
+                <div className="flex flex-col items-center space-y-2 py-8">
+                  <div className="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/20">
+                    <Check size={24} className="text-emerald-400" />
+                  </div>
+                  <span className="text-sm font-bold text-emerald-400">Conectado!</span>
+                  <span className="text-xs text-zinc-500">Esta janela fechará em instantes.</span>
+                </div>
+              ) : qrCodeBase64 ? (
+                <div className="space-y-4">
+                  <img 
+                    src={qrCodeBase64.startsWith('data:') ? qrCodeBase64 : `data:image/png;base64,${qrCodeBase64}`} 
+                    alt="Scan QR" 
+                    className="w-56 h-56 rounded-lg border border-zinc-800 mx-auto"
+                  />
+                  <div className="flex flex-col items-center space-y-1">
+                    <div className="flex items-center space-x-1.5 text-xs text-zinc-400">
+                      <Loader2 size={12} className="animate-spin text-[#00a884]" />
+                      <span>Aguardando leitura do QR Code...</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <span className="text-xs text-zinc-500">Nenhum QR code disponível.</span>
+              )}
+            </div>
+
+            <div className="text-[10px] text-zinc-500 leading-normal px-2">
+              Abra o WhatsApp no seu celular, vá em <span className="font-semibold text-zinc-400">Aparelhos conectados &gt; Conectar um aparelho</span> e aponte a câmera para a imagem acima.
+            </div>
           </div>
         </div>
       )}

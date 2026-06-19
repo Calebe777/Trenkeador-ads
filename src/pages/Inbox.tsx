@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { apiClient } from '../api/client';
-import type { ConversaOut, MensagemOut, LeadDetalhe, RespostaRapida, TemplateIn } from '../types';
+import type { ConversaOut, MensagemOut, LeadDetalhe, RespostaRapida, TemplateIn, CanalOut } from '../types';
 import { 
   Send, 
   Clock, 
@@ -25,6 +25,9 @@ export const Inbox: React.FC = () => {
   const [activeConversa, setActiveConversa] = useState<ConversaOut | null>(null);
   const [messages, setMessages] = useState<MensagemOut[]>([]);
   const [leadDetail, setLeadDetail] = useState<LeadDetalhe | null>(null);
+  
+  const [canais, setCanais] = useState<CanalOut[]>([]);
+  const [selectedCanalId, setSelectedCanalId] = useState<string>('');
   
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -90,7 +93,8 @@ export const Inbox: React.FC = () => {
       };
       setMessages(prev => [...prev, optimisticMsg]);
 
-      await apiClient.post(`/conversas/${activeConversa.id}/midia`, formData, {
+      const mediaUrl = `/conversas/${activeConversa.id}/midia` + (selectedCanalId ? `?canal_id=${selectedCanalId}` : '');
+      await apiClient.post(mediaUrl, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -263,6 +267,15 @@ export const Inbox: React.FC = () => {
     }
   };
 
+  const fetchCanais = async () => {
+    try {
+      const response = await apiClient.get<CanalOut[]>('/whatsapp/canais');
+      setCanais(response.data);
+    } catch (err) {
+      console.error('Failed to load channels', err);
+    }
+  };
+
   const fetchQuickReplies = async () => {
     try {
       const response = await apiClient.get<RespostaRapida[]>('/respostas-rapidas');
@@ -272,9 +285,26 @@ export const Inbox: React.FC = () => {
     }
   };
 
+  // Update selected channel when active chat changes
+  useEffect(() => {
+    if (activeConversa) {
+      if (activeConversa.canal_id) {
+        setSelectedCanalId(activeConversa.canal_id);
+      } else if (canais.length > 0) {
+        setSelectedCanalId(canais[0].id);
+      } else {
+        setSelectedCanalId('');
+      }
+    } else {
+      setSelectedCanalId('');
+    }
+  }, [activeConversa, canais]);
+
   // 1. Initial configuration & WebSocket setup
   useEffect(() => {
     fetchConversas();
+    fetchQuickReplies();
+    fetchCanais();
     fetchQuickReplies();
 
     const connectWebSocket = () => {
@@ -426,7 +456,8 @@ export const Inbox: React.FC = () => {
       setMessages(prev => [...prev, optimisticMsg]);
       setReplyText('');
 
-      await apiClient.post(`/conversas/${activeConversa.id}/responder`, {
+      const responderUrl = `/conversas/${activeConversa.id}/responder` + (selectedCanalId ? `?canal_id=${selectedCanalId}` : '');
+      await apiClient.post(responderUrl, {
         texto: textToSend
       });
 
@@ -454,7 +485,8 @@ export const Inbox: React.FC = () => {
     };
 
     try {
-      await apiClient.post(`/conversas/${activeConversa.id}/template`, payload);
+      const templateUrl = `/conversas/${activeConversa.id}/template` + (selectedCanalId ? `?canal_id=${selectedCanalId}` : '');
+      await apiClient.post(templateUrl, payload);
       setTemplateName('');
       // Force reload messages list
       fetchMessages(activeConversa.id);
@@ -609,14 +641,34 @@ export const Inbox: React.FC = () => {
                 </div>
               </div>
 
-              {activeConversa.janela_24h_expira_em && (
-                <div className="text-right text-xs hidden sm:block">
-                  <span className="text-[#667781] block text-[9px]">Expiração (UTC):</span>
-                  <span className="font-mono text-[#111b21] font-semibold text-[10px]">
-                    {new Date(activeConversa.janela_24h_expira_em).toLocaleString('pt-BR')}
-                  </span>
-                </div>
-              )}
+              <div className="flex items-center space-x-4">
+                {/* Channel Selector Dropdown */}
+                {canais.length > 0 && (
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-[10px] text-[#667781] font-semibold uppercase tracking-wider hidden md:inline">Enviar de:</span>
+                    <select
+                      value={selectedCanalId}
+                      onChange={(e) => setSelectedCanalId(e.target.value)}
+                      className="bg-white border border-zinc-200 rounded-xl px-2 py-1 text-xs focus:outline-none focus:border-[#00a884] font-medium text-[#111b21] shadow-xs cursor-pointer"
+                    >
+                      {canais.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nome} ({c.numero_exibicao || (c.phone_number_id?.startsWith('qr-') ? 'Não-oficial' : c.phone_number_id)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {activeConversa.janela_24h_expira_em && (
+                  <div className="text-right text-xs hidden sm:block">
+                    <span className="text-[#667781] block text-[9px]">Expiração (UTC):</span>
+                    <span className="font-mono text-[#111b21] font-semibold text-[10px]">
+                      {new Date(activeConversa.janela_24h_expira_em).toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Error notifications banner */}

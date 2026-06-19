@@ -140,15 +140,18 @@ export interface CanalOut {
   phone_number_id: string;
   numero_exibicao: string | null;
   ativo: boolean;
+  tipo?: 'oficial' | 'nao_oficial' | null;
+  status?: string | null;
 }
 
 export interface CanalIn {
   nome: string;
-  phone_number_id: string;
-  access_token: string;
+  phone_number_id?: string | null;
+  access_token?: string | null;
   waba_id?: string | null;
   numero_exibicao?: string | null;
   verify_token?: string | null;
+  tipo?: 'oficial' | 'nao_oficial' | null;
 }
 
 export interface CanalUpdateIn {
@@ -159,7 +162,9 @@ export interface CanalUpdateIn {
   numero_exibicao?: string | null;
   verify_token?: string | null;
   ativo?: boolean | null;
+  tipo?: 'oficial' | 'nao_oficial' | null;
 }
+
 
 export interface ConversaOut {
   id: string;
@@ -170,6 +175,7 @@ export interface ConversaOut {
   atendente_id: string | null;
   ultima_mensagem_em: string | null;
   janela_24h_expira_em: string | null;
+  canal_id?: string | null;
 }
 
 export interface MensagemOut {
